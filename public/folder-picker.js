@@ -19,8 +19,9 @@ const ICON_PLUS = '<svg viewBox="0 0 24 24" class="icon fp-icon"><path d="M12 5v
 
 export function createFolderPicker(root, { folders, value = null, onChange, createFolder }) {
   root.classList.add('fp');
+  // tabindex="0" on the button: Safari leaves buttons out of the Tab order otherwise.
   root.innerHTML = `
-    <button type="button" class="fp-button" aria-haspopup="listbox" aria-expanded="false">
+    <button type="button" class="fp-button" aria-haspopup="listbox" aria-expanded="false" tabindex="0">
       <span class="fp-current"></span>
       <svg viewBox="0 0 24 24" class="fp-chevron"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
@@ -164,6 +165,20 @@ export function createFolderPicker(root, { folders, value = null, onChange, crea
   }
 
   button.addEventListener('click', () => (panel.hidden ? open() : close()));
+  // Typing on the focused button (e.g. after tabbing in) opens the search with
+  // that text; ↓ opens it too.
+  button.addEventListener('keydown', (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key.length === 1 && e.key !== ' ') {
+      e.preventDefault();
+      open();
+      input.value = e.key;
+      render();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      open();
+    }
+  });
   input.addEventListener('input', render);
   input.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {

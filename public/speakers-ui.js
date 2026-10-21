@@ -249,18 +249,19 @@ class SpeakerView {
         <span class="sp-section-title">Speaker Matching</span>
         <span class="sp-match-status"></span>
       </div>
+      <!-- Player and transcript stay out of the Tab order: Tab goes tags → folder → speaker names. -->
       <section class="sp-player">
         <audio preload="auto" src="/api/meetings/${encodeURIComponent(meeting.id)}/audio"></audio>
         <div class="sp-controls">
-          <button class="sp-play" type="button" aria-label="Play">${ICON_PLAY}</button>
+          <button class="sp-play" type="button" aria-label="Play" tabindex="-1">${ICON_PLAY}</button>
           <span class="sp-clock"><span class="sp-now">0:00</span> / ${clock(meeting.durationMs)}</span>
           <div class="sp-seek">
             <div class="sp-seek-track">${this.speakerStripe()}</div>
-            <input type="range" min="0" max="${meeting.durationMs}" value="0" step="100" aria-label="Seek">
+            <input type="range" min="0" max="${meeting.durationMs}" value="0" step="100" aria-label="Seek" tabindex="-1">
           </div>
-          <button class="sp-rate" type="button" title="Playback speed">1×</button>
+          <button class="sp-rate" type="button" title="Playback speed" tabindex="-1">1×</button>
         </div>
-        <div class="sp-transcript" tabindex="0">
+        <div class="sp-transcript" tabindex="-1">
           ${transcript.map((l, i) => `
             <div class="sp-line" data-i="${i}" data-start="${l.startMs}">
               <span class="sp-line-time">${clock(l.startMs)}</span>
