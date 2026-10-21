@@ -324,7 +324,7 @@ function rowHtml(m, max, q) {
   if (created) meta.push(`<span title="${esc(created.toLocaleString())}">Uploaded ${esc(sameDay(created, start) ? fmtTime(created) : `${fmtDate(created)}, ${fmtTime(created)}`)}</span>`);
   if (m.serialNumber) meta.push(`<span>Device ${esc(m.serialNumber)}</span>`);
   const org = [];
-  if (m.ignored) org.push('<span class="badge" title="Hidden from the list unless “Show ignored” is on">Ignored</span>');
+  if (m.ignored) org.push('<span class="badge err" title="Hidden from the list unless “Show ignored” is on">Ignored</span>');
   if (['queued', 'syncing'].includes(m.titleSync)) org.push('<span class="badge accent"><span class="spinner tiny"></span> Renaming in Plaud…</span>');
   if (m.titleSync === 'failed') org.push('<span class="badge warn" title="Open Edit to try again">Plaud title update failed</span>');
   const k = m.keepIt;
@@ -351,11 +351,11 @@ function rowHtml(m, max, q) {
           <svg viewBox="0 0 24 24" class="icon"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z M13.5 6.5l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
           Edit
         </button>
-        <button type="button" class="btn small" data-action="keepit">
+        <button type="button" class="btn small ok" data-action="keepit">
           ${KEEPIT_ICON}
           Send to Keep It
         </button>
-        <button type="button" class="btn small ghost" data-action="ignore" title="${m.ignored ? 'Show this meeting in the list again' : 'Hide this meeting from the list (you won’t import it)'}">
+        <button type="button" class="btn small ${m.ignored ? 'danger' : 'ghost'}" data-action="ignore" title="${m.ignored ? 'Show this meeting in the list again' : 'Hide this meeting from the list (you won’t import it)'}">
           ${m.ignored
             ? '<svg viewBox="0 0 24 24" class="icon"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg> Un-ignore'
             : '<svg viewBox="0 0 24 24" class="icon"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m4 4 16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Ignore'}
