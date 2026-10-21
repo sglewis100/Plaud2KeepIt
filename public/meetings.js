@@ -9,7 +9,8 @@ const STORE_KEY = 'p2k.meetings.filter';
 
 // ---- State (remembered per browser) ----
 
-const defaults = { mode: 'range', range: 'week', from: null, to: null, n: 25, q: '', hideSynced: false };
+// listMode: the tab to return to when a search is cleared.
+const defaults = { listMode: 'range', mode: 'range', range: 'week', from: null, to: null, n: 25, q: '', hideSynced: false };
 let state = { ...defaults, ...load() };
 
 function load() {
@@ -121,6 +122,7 @@ function describe() {
 $$('.tab').forEach((t) => t.addEventListener('click', () => {
   if (state.mode === t.dataset.mode) return;
   state.mode = t.dataset.mode;
+  if (state.mode !== 'search') state.listMode = state.mode;
   save(); syncControls();
   if (state.mode === 'search') {
     $('#searchInput').focus();
@@ -177,7 +179,21 @@ $('#searchForm').addEventListener('submit', (e) => {
   e.preventDefault();
   state.q = $('#searchInput').value.trim();
   save();
-  state.q ? refresh() : showSearchPrompt();
+  state.q ? refresh() : clearSearch();
+});
+
+// Clearing the search (✕ in the box, Enter on an empty box, or leaving it
+// empty) goes back to the list you were on before searching. Emptying the box
+// while still typing doesn't.
+function clearSearch() {
+  state.q = '';
+  $('#searchInput').value = '';
+  state.mode = state.listMode === 'last' ? 'last' : 'range';
+  save(); syncControls(); refresh();
+}
+$('#searchInput').addEventListener('search', () => { if (!$('#searchInput').value.trim()) clearSearch(); });
+$('#searchInput').addEventListener('blur', () => {
+  if (state.mode === 'search' && state.q && !$('#searchInput').value.trim()) clearSearch();
 });
 
 $('#reload').addEventListener('click', () => refresh());
