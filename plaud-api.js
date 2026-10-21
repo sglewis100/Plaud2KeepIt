@@ -1,4 +1,5 @@
 import { withPage } from './browser.js';
+import { bus } from './events.js';
 
 // Plaud's internal web API (unofficial): used only for what MCP can't give us,
 // i.e. the images embedded in summaries. The login token is read from the
@@ -18,6 +19,7 @@ async function captureSession() {
     for (let i = 0; i < 60 && !h; i++) await new Promise((r) => setTimeout(r, 100));
     return h;
   });
+  bus.emit('plaud-session', !!headers);
   if (!headers) throw new Error('Couldn’t get a Plaud web session (is the Plaud website logged in?)');
   delete headers['x-request-id'];
   Object.assign(headers, { origin: 'https://web.plaud.ai', referer: 'https://web.plaud.ai/' });

@@ -1,4 +1,6 @@
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
+import { readlinkSync } from 'node:fs';
+import { promisify } from 'node:util';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
@@ -45,22 +47,34 @@ export function isInteractiveSessionOpen() {
   return interactiveSession !== null;
 }
 
+const launchOptions = () => ({
+  headless: HEADLESS,
+  userDataDir: USER_DATA_DIR,
+  // Set CHROME_PATH to use an installed Chrome/Chromium instead of the bundled one.
+  executablePath: process.env.CHROME_PATH || undefined,
+  defaultViewport: { width: 1280, height: 900 },
+});
+
 export function getBrowser() {
   if (interactiveSession) {
     return Promise.reject(new Error('Browser profile is in use by the login window'));
   }
   if (!browserPromise) {
     browserPromise = puppeteer
-      .launch({
-        headless: HEADLESS,
-        userDataDir: USER_DATA_DIR,
-        // Set CHROME_PATH to use an installed Chrome/Chromium instead of the bundled one.
-        executablePath: process.env.CHROME_PATH || undefined,
-        defaultViewport: { width: 1280, height: 900 },
+      .launch(launchOptions())
+      .catch(async (err) => {
+        // A Chrome we lost touch with (e.g. across sleep, or from a server that
+        // didn't shut down cleanly) still holds the profile lock: stop it, retry.
+        if (!/already running/i.test(err.message) || !(await killStaleChrome())) throw err;
+        return puppeteer.launch(launchOptions());
       })
       .then((browser) => {
         browser.on('disconnected', () => {
           browserPromise = null;
+          // Connection lost but Chrome may still be running and holding the
+          // profile; make sure it's gone so the next launch can start.
+          const proc = browser.process();
+          if (proc && proc.exitCode === null) proc.kill('SIGKILL');
         });
         return browser;
       })
@@ -70,6 +84,23 @@ export function getBrowser() {
       });
   }
   return browserPromise;
+}
+
+// Stops the Chrome holding this app's profile lock, if it's really one running
+// on this profile. Chrome's SingletonLock points at "<host>-<pid>".
+async function killStaleChrome() {
+  let pid;
+  try { pid = Number(readlinkSync(path.join(USER_DATA_DIR, 'SingletonLock')).split('-').pop()); } catch { return false; }
+  if (!pid) return false;
+  const command = await promisify(execFile)('ps', ['-p', String(pid), '-o', 'command=']).then((r) => r.stdout, () => '');
+  if (!command.includes(`--user-data-dir=${USER_DATA_DIR}`)) return false;
+  console.warn(`Stopping a stale Chrome (pid ${pid}) that was holding the browser profile`);
+  try { process.kill(pid, 'SIGKILL'); } catch { return false; }
+  for (let i = 0; i < 20; i++) {
+    try { process.kill(pid, 0); } catch { return true; } // gone
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  return true;
 }
 
 // Opens a fresh page, runs fn(page), and always closes the page afterward.

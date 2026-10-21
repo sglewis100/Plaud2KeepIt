@@ -21,7 +21,8 @@ app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] })
 
 app.get('/api/plaud/status', async (req, res) => {
   try {
-    res.json({ ok: true, ...(await checkLoginStatus()) });
+    // ?maxAge=<ms>: a recent result is fine (used by the sign-in banner on every page)
+    res.json({ ok: true, ...(await checkLoginStatus({ maxAgeMs: Number(req.query.maxAge) || 0 })) });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

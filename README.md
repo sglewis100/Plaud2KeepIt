@@ -93,6 +93,8 @@ Open **Settings** (top right). There are two Plaud connections, and both are nee
 
 Then open Keep It (and allow the Automation prompt when it appears on your first send).
 
+If either sign-in lapses later, a yellow banner at the top of the Meetings, Folders & Tags and Voice prints pages says so, with a **Sign in** button that starts the same process; no need to go to Settings.
+
 ---
 
 ## Running it in the background (recommended)

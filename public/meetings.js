@@ -1,4 +1,5 @@
 import { openSpeakerDialog } from './speakers-ui.js';
+import { recheckSignIn } from './signin-banner.js';
 import { sendToKeepIt } from './keepit-ui.js';
 
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -197,6 +198,8 @@ $('#searchInput').addEventListener('blur', () => {
 });
 
 $('#reload').addEventListener('click', () => refresh());
+// Signing in to Plaud MCP from the banner: load the meetings it couldn't before.
+window.addEventListener('plaud-signed-in', (e) => { if (e.detail.includes('mcp')) refresh(); });
 
 $('#hideSynced').checked = !!state.hideSynced;
 $('#hideSynced').addEventListener('change', (e) => {
@@ -398,6 +401,7 @@ $('#results').addEventListener('click', async (e) => {
       onStatus: (st) => {
         m.keepIt = st ? { status: st.status, sync: st.sync, missing: st.missing, step: st.step, error: st.error, at: st.finishedAt } : (m.keepItDone || null);
         if (st?.status === 'done') m.keepItDone = m.keepIt;
+        if (st?.status === 'failed') recheckSignIn(); // a lapsed Plaud sign-in shows the banner
         rerenderRow(m);
         // With "Hide synced" on, a meeting that's now fully in Keep It leaves
         // the list: show "In Keep It" briefly, fade it out, then re-filter.

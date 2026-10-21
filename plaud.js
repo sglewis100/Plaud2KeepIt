@@ -8,12 +8,18 @@ import {
   closeInteractiveWindow,
 } from './browser.js';
 import { renameMeetingApi, renameSpeakersApi } from './plaud-api.js';
+import { bus } from './events.js';
 
 const PLAUD_ORIGIN = 'https://web.plaud.ai';
 const LOGIN_URL = `${PLAUD_ORIGIN}/login`;
 const LOGIN_TIMEOUT_MS = 10 * 60 * 1000;
 
 let lastStatus = { loggedIn: null, checkedAt: null };
+
+// Other work (e.g. the API session capture) finds out about sign-in as it goes.
+bus.on('plaud-session', (loggedIn) => {
+  lastStatus = { loggedIn, checkedAt: new Date().toISOString() };
+});
 let loginState = { inProgress: false, error: null };
 
 const isLoginPath = (url) => {
@@ -35,9 +41,13 @@ const isLoggedInUrl = (url) => {
 
 // Opens Plaud's login page headlessly. A signed-in session gets redirected to
 // the app; a signed-out one stays on /login.
-export async function checkLoginStatus() {
+// maxAgeMs: reuse a status at most this old instead of loading Plaud again.
+export async function checkLoginStatus({ maxAgeMs = 0 } = {}) {
   if (isInteractiveSessionOpen()) {
     return { ...lastStatus, loginInProgress: true, loginError: loginState.error };
+  }
+  if (maxAgeMs && lastStatus.checkedAt && Date.now() - Date.parse(lastStatus.checkedAt) < maxAgeMs) {
+    return { ...lastStatus, loginInProgress: false, loginError: loginState.error };
   }
   const url = await withPage(async (page) => {
     await page.goto(LOGIN_URL, { waitUntil: 'networkidle2', timeout: 30000 });

@@ -154,6 +154,18 @@ h1 { font-size: 28px; line-height: 1.2; letter-spacing: -.02em; margin: 0; }
 .notice.error { border-color: color-mix(in srgb, var(--err) 35%, var(--border)); background: color-mix(in srgb, var(--err) 8%, var(--surface)); }
 .notice a { color: var(--accent-text); font-weight: 600; }
 
+/* ---- Sign-in banner (signin-banner.js) ---- */
+.signin-banner { margin: 0 0 16px; display: flex; flex-direction: column; gap: 8px; }
+.signin-row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--radius); font-size: 14px;
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--border));
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface));
+}
+.signin-row > .icon { width: 20px; height: 20px; color: var(--warn); flex: none; }
+.signin-text { flex: 1; color: var(--text-2); }
+.signin-text b { color: var(--text); }
+.signin-err { display: block; color: var(--err); font-size: 13px; margin-top: 2px; }
+
 /* ---- Results ---- */
 .results { margin-top: 16px; display: flex; flex-direction: column; gap: 20px; }
 .day-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px 8px; }
