@@ -103,6 +103,9 @@ const libRoute = (fn) => (req, res) => {
 
 app.get('/api/library', libRoute(() => ({ folders: library.listFolders(), tags: library.listTags() })));
 // ?folder=<id>|none [&deep=1] or ?tag=<id>
+// Unused tags and empty folders (GET to preview, POST to remove).
+app.get('/api/library/unused', libRoute(() => library.unusedItems()));
+app.post('/api/library/cleanup', libRoute(() => library.cleanUpUnused()));
 app.get('/api/library/meetings', libRoute((req) => library.libraryMeetings({ folderId: req.query.folder, tagId: req.query.tag, deep: !!req.query.deep })));
 app.get('/api/meetings/:id/meta', libRoute((req) => library.meetingMeta(req.params.id)));
 // Body: { title, folderId, tags: [names], plaudTitle, startAt, durationMs }

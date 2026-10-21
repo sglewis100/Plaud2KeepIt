@@ -177,7 +177,9 @@ Only Plaud2KeepIt's own items are ever touched, never your other Keep It content
 - **Plaud MCP**: sign in or out (for recordings, summaries and transcripts).
 - **Voice prints**: everyone the app recognizes. Search by person or meeting, **rename** someone (optionally in Plaud too), **delete** a voice print, or tick two or more people to **merge** them (with a check of whether their voices actually match). Each person keeps at most 10 voice prints; the most redundant are dropped, so the ones kept cover the widest range of conditions.
 - **Keep It**: how many meetings are fully, partially, or no longer in Keep It, when it last checked, and **Check Keep It now**.
-- **Folders & tags**: the folder tree (new, rename, move, delete) and a tag cloud (rename, merge, delete). Selecting either lists its meetings.
+- **Folders & tags**: the folder tree (new, rename, move, delete) and a tag cloud (rename, merge, delete). Selecting either lists its meetings. **Clean up…** removes tags no meeting uses and folders with no meetings in them, after showing you the list.
+
+Folders and tags are the app's own organization. Erasing Keep It doesn't remove them, so if you start over, delete them here, or use **Clean up…** once no meeting uses them.
 
 ---
 

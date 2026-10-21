@@ -326,3 +326,23 @@ for (const { file_id } of db.prepare(`SELECT file_id FROM meetings WHERE title_s
   db.prepare(`UPDATE meetings SET title_sync = 'queued' WHERE file_id = ?`).run(file_id);
   syncTitle(file_id);
 }
+
+// ---- Cleanup: unused tags and empty folders ----
+
+// Tags no meeting uses, and folders with no meetings in them or any subfolder.
+export function unusedItems() {
+  const tags = listTags().filter((t) => !t.count).map(({ id, name }) => ({ id, name }));
+  const folders = listFolders().filter((f) => !f.total).map(({ id, path, parentId }) => ({ id, path, parentId }));
+  return { tags, folders };
+}
+
+export function cleanUpUnused() {
+  const { tags, folders } = unusedItems();
+  tx(() => {
+    for (const t of tags) db.prepare('DELETE FROM tags WHERE id = ?').run(t.id);
+    // Deepest first, so parents are empty of subfolders when they go.
+    const depth = (f) => f.path.split(' / ').length;
+    for (const f of [...folders].sort((a, b) => depth(b) - depth(a))) db.prepare('DELETE FROM folders WHERE id = ?').run(f.id);
+  });
+  return { tags: tags.map((t) => t.name), folders: folders.map((f) => f.path) };
+}

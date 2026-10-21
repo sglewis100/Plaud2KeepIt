@@ -360,4 +360,30 @@ async function deleteTag(t) {
   } catch (err) { alert(err.message); }
 }
 
+// ---- Clean up unused tags and empty folders ----
+
+$('#cleanUp').addEventListener('click', async () => {
+  let unused;
+  try { unused = await api('/api/library/unused'); } catch (err) { return alert(err.message); }
+  const { tags: t, folders: f } = unused;
+  if (!t.length && !f.length) return toast('Nothing to clean up: every tag and folder is in use');
+  const list = (items) => `<ul class="kp-list">${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  const d = await ask({
+    title: 'Clean up unused tags and folders?',
+    body: `
+      ${t.length ? `<p><b>${plural(t.length, 'tag')}</b> no meeting uses:</p>${list(t.map((x) => x.name))}` : ''}
+      ${f.length ? `<p><b>${plural(f.length, 'folder')}</b> with no meetings (including subfolders):</p>${list(f.map((x) => x.path))}` : ''}
+      <p class="me-hint">Meetings aren’t affected. This can’t be undone.</p>`,
+    ok: 'Remove them',
+    danger: true,
+  });
+  if (!d) return;
+  try {
+    const r = await api('/api/library/cleanup', { method: 'POST' });
+    selection = null;
+    toast(`Removed ${[r.tags.length && plural(r.tags.length, 'tag'), r.folders.length && plural(r.folders.length, 'folder')].filter(Boolean).join(' and ')}`);
+    await load();
+  } catch (err) { alert(err.message); }
+});
+
 load().catch((err) => { $('#detail').innerHTML = `<div class="notice error">Couldn’t load: ${esc(err.message)}</div>`; });
