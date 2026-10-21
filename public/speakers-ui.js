@@ -113,11 +113,9 @@ async function applyAll(d) {
     for (const s of p.unsaved) {
       if ((await d.view.save(s)) !== 'ok') return false;
     }
-    if (d.view?.queued().length) {
-      await d.view.sendToPlaud();
-    } else {
-      d.close(); // nothing left to watch
-    }
+    // Plaud keeps updating in the background, so there's nothing to wait for here.
+    if (d.view?.queued().length && !(await d.view.sendToPlaud())) return false;
+    d.close();
     return true;
   } finally {
     d.applying = false;
@@ -302,12 +300,14 @@ class SpeakerView {
   }
 
   async sendToPlaud() {
-    if (!this.queued().length) return;
+    if (!this.queued().length) return true;
     try {
       this.applySync(await api(`/api/meetings/${encodeURIComponent(this.data.meeting.id)}/plaud-sync`, { method: 'POST' }));
       this.pollSync();
+      return true;
     } catch (err) {
       alert(`Couldn't send to Plaud: ${err.message}`);
+      return false;
     }
   }
 
