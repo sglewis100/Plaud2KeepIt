@@ -72,6 +72,7 @@ function pending(d) {
     details: !!d.details?.isDirty(),
     unsaved: v ? v.unsaved() : [],
     queued: v ? v.queued() : [],
+    cleared: v ? v.cleared() : [],
   };
 }
 
@@ -81,14 +82,15 @@ function updateApply(d) {
   const count = btn.querySelector('.sp-apply-count');
   const syncing = !!d.view?.data.speakers.some((s) => s.assignment?.plaudSync === 'syncing');
   const p = pending(d);
-  const n = (p.details ? 1 : 0) + p.unsaved.length + p.queued.length;
+  const names = p.unsaved.length + p.queued.length + p.cleared.length;
+  const n = (p.details ? 1 : 0) + names;
   btn.classList.toggle('busy', syncing || !!d.applying);
   btn.disabled = syncing || !!d.applying;
   count.hidden = !n || syncing;
   count.textContent = n;
-  const parts = [p.details && 'meeting details', (p.unsaved.length + p.queued.length) && `${p.unsaved.length + p.queued.length} name${p.unsaved.length + p.queued.length === 1 ? '' : 's'}`].filter(Boolean);
+  const parts = [p.details && 'meeting details', names && `${names} name${names === 1 ? '' : 's'}`].filter(Boolean);
   // Meetings already in Keep It get their items rebuilt with the new names.
-  const keepIt = ['full', 'partial'].includes(d.meeting?.keepIt?.sync) && (p.unsaved.length + p.queued.length) > 0;
+  const keepIt = ['full', 'partial'].includes(d.meeting?.keepIt?.sync) && names > 0;
   btn.title = syncing ? 'Updating Plaud…' : n ? `Save ${parts.join(' and ')}, and update Plaud${keepIt ? ' and Keep It' : ''}` : 'Done';
   btn.classList.toggle('with-keepit', keepIt && !syncing);
   const note = d.querySelector('.sp-keepit-note');
@@ -100,7 +102,7 @@ function updateApply(d) {
 async function applyAll(d) {
   if (d.applying || d.view?.data.speakers.some((s) => s.assignment?.plaudSync === 'syncing')) return false;
   const p = pending(d);
-  if (!p.details && !p.unsaved.length && !p.queued.length) { d.close(); return true; }
+  if (!p.details && !p.unsaved.length && !p.queued.length && !p.cleared.length) { d.close(); return true; }
   d.applying = true;
   updateApply(d);
   try {
@@ -109,6 +111,9 @@ async function applyAll(d) {
       if (!saved) return false;
       d.onSaved?.(saved);
       d.querySelector('.sp-head h2').textContent = saved.title;
+    }
+    for (const s of p.cleared) {
+      if (!(await d.view.clearName(s))) return false;
     }
     for (const s of p.unsaved) {
       if ((await d.view.save(s)) !== 'ok') return false;
@@ -126,7 +131,7 @@ async function applyAll(d) {
 // Closing with unsaved or unsent changes asks what to do first.
 function requestClose() {
   const p = pending(dialog);
-  const waiting = p.details || p.queued.length || p.unsaved.some((s) => s.touched);
+  const waiting = p.details || p.queued.length || p.cleared.length || p.unsaved.some((s) => s.touched);
   if (waiting && !dialog.querySelector('.sp-confirm')) askBeforeClose(dialog);
   else dialog.close();
 }
@@ -138,8 +143,9 @@ function askBeforeClose(d) {
     ...(p.details ? ['title, tags or folder changes'] : []),
     ...p.queued.map((s) => esc(s.assignment.name)),
     ...touched.map((s) => esc(d.view.card(s.label).querySelector('.sp-input').value.trim())),
+    ...p.cleared.map((s) => `${esc(s.label)} (cleared)`),
   ];
-  const unsavedHere = p.details || touched.length;
+  const unsavedHere = p.details || touched.length || p.cleared.length;
   const box = document.createElement('div');
   box.className = 'sp-confirm';
   box.innerHTML = `
@@ -284,6 +290,12 @@ class SpeakerView {
   // Names saved here but not yet in Plaud (including failed attempts).
   queued() {
     return this.data.speakers.filter((s) => s.assignment && ['queued', 'pending', 'failed'].includes(s.assignment.plaudSync));
+  }
+
+  // Names cleared with ✕ that are saved here or shown in Plaud: ✓ removes them
+  // and puts Plaud's own label back.
+  cleared() {
+    return this.data.speakers.filter((s) => s.cleared && !this.card(s.label).querySelector('.sp-input').value.trim());
   }
 
   // Names typed into a box but not saved yet (their Save/Confirm button is showing).
@@ -497,7 +509,10 @@ class SpeakerView {
         </div>
         <form class="sp-name-row" autocomplete="off">
           <label class="sp-name-label" for="sp-in-${esc(s.label)}"></label>
-          <input id="sp-in-${esc(s.label)}" class="sp-input" maxlength="32" placeholder="Who is this?" spellcheck="false">
+          <span class="sp-input-wrap">
+            <input id="sp-in-${esc(s.label)}" class="sp-input" maxlength="32" placeholder="Who is this?" spellcheck="false">
+            <button type="button" class="sp-clear" tabindex="-1" aria-label="Clear name" title="Clear: keep Plaud’s “${esc(s.label)}” label" hidden>${ICON_X}</button>
+          </span>
           <button class="btn primary sp-save" type="submit" hidden>Save</button>
         </form>
         <div class="sp-status" aria-live="polite"></div>
@@ -530,6 +545,15 @@ class SpeakerView {
       s.touched = true;
       this.updateButton(s);
       this.updateApply();
+    });
+    card.querySelector('.sp-clear').addEventListener('click', () => {
+      input.value = '';
+      s.touched = true;
+      // Saved here, or a real name in Plaud: ✓ will take it off.
+      s.cleared = !!s.assignment || !isGeneric(s.displayName, s.label);
+      this.updateCard(s);
+      this.updateApply();
+      input.focus();
     });
     card.querySelector('.sp-name-row').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -584,6 +608,11 @@ class SpeakerView {
       return;
     }
 
+    if (s.cleared && !card.querySelector('.sp-input').value.trim()) {
+      card.querySelector('.sp-status').innerHTML = `<span class="sp-hint">${ICON_INFO} ✓ will remove <b>${esc(this.nameFor(s.label))}</b> and put back Plaud’s <b>${esc(s.label)}</b> label${s.displayName !== s.label ? ' in Plaud' : ''}.</span>`;
+      this.updateButton(s);
+      return;
+    }
     const alike = s.assignment ? [] : s.alike;
     card.querySelector('.sp-status').innerHTML = alike.length
       ? `<span class="sp-hint">${ICON_INFO} Sounds similar to ${alike.map((l) => `<b>${esc(this.nameFor(l))}</b>`).join(' and ')}. Plaud may have split one person into two labels.</span>`
@@ -597,6 +626,8 @@ class SpeakerView {
     const name = card.querySelector('.sp-input').value.trim();
     const btn = card.querySelector('.sp-save');
     const same = (a, b) => a && b && a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0;
+    card.querySelector('.sp-clear').hidden = !name;
+    if (name && s.cleared) { s.cleared = false; this.updateCard(s); return; } // typed a name instead
 
     if (s.assignment && same(name, s.assignment.name)) {
       const waiting = ['queued', 'pending'].includes(s.assignment.plaudSync);
@@ -614,6 +645,23 @@ class SpeakerView {
     btn.disabled = false;
     btn.classList.remove('queued');
     btn.textContent = s.suggestion && same(name, s.suggestion.name) ? 'Confirm' : 'Save';
+  }
+
+  // Removes the label's name here and (if Plaud shows one) reverts it in Plaud.
+  async clearName(s) {
+    try {
+      await api(`/api/meetings/${encodeURIComponent(this.data.meeting.id)}/speakers/${encodeURIComponent(s.label)}`, { method: 'DELETE' });
+      s.assignment = null;
+      s.suggestion = null;
+      s.cleared = false;
+      s.displayName = s.label;
+      this.relabelChips(s.label);
+      this.data.speakers.forEach((x) => this.updateCard(x));
+      return true;
+    } catch (err) {
+      this.card(s.label).querySelector('.sp-status').innerHTML = `<span class="sp-error">${esc(err.message)}</span>`;
+      return false;
+    }
   }
 
   async save(s, extra = {}) {
@@ -706,4 +754,6 @@ const ICON_PAUSE = '<svg viewBox="0 0 24 24" class="icon"><rect x="6.5" y="5" wi
 const ICON_PLAY_SM = '<svg viewBox="0 0 24 24"><path d="M8.5 6v12l9.5-6z" fill="currentColor"/></svg>';
 const ICON_PAUSE_SM = '<svg viewBox="0 0 24 24"><rect x="7" y="6" width="3.6" height="12" rx="1" fill="currentColor"/><rect x="13.4" y="6" width="3.6" height="12" rx="1" fill="currentColor"/></svg>';
 const ICON_CHECK = '<svg viewBox="0 0 24 24" class="icon xs"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_X = '<svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const isGeneric = (name, label) => !name || name === label || /^speaker\s*\d+$/i.test(name);
 const ICON_INFO = '<svg viewBox="0 0 24 24" class="icon xs"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v5M12 7.5v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';

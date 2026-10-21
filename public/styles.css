@@ -301,6 +301,15 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1
 .sp-name-label { font-weight: 600; color: var(--text-2); font-size: 14px; white-space: nowrap; }
 .sp-name-label::after { content: " —"; color: var(--muted); }
 .sp-input { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); font-size: 15px; }
+.sp-input-wrap { position: relative; display: block; min-width: 0; }
+.sp-input-wrap .sp-input { padding-right: 34px; }
+.sp-clear {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 50%;
+  border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer;
+}
+.sp-clear[hidden] { display: none; }
+.sp-clear:hover { background: color-mix(in srgb, var(--err) 12%, transparent); color: var(--err); }
+.sp-clear svg { width: 14px; height: 14px; }
 .sp-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); background: var(--surface); }
 .sp-save { min-width: 86px; justify-content: center; }
 .sp-status:not(:empty) { margin-top: 8px; font-size: 13px; }

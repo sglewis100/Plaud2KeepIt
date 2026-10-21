@@ -378,6 +378,37 @@ export async function assignSpeaker(fileId, label, { name, speakerId, mode }) {
   return { ...result, plaudSync: 'queued', plaudSyncError: null };
 }
 
+// Clears a label's name: removes it here (with the voice print it added) and,
+// if Plaud shows a name for it, puts Plaud's own label ("Speaker 3") back.
+export async function unassignSpeaker(fileId, label) {
+  const meeting = await getMeeting(fileId);
+  if (!meeting.segments.some((s) => s.label === label)) throw new Error(`No ${label} in this meeting`);
+  tx(() => {
+    const previous = db.prepare('SELECT * FROM meeting_speakers WHERE file_id = ? AND plaud_label = ?').get(fileId, label);
+    if (!previous) return;
+    if (previous.voice_print_id) db.prepare('DELETE FROM voice_prints WHERE id = ?').run(previous.voice_print_id);
+    db.prepare('DELETE FROM meeting_speakers WHERE file_id = ? AND plaud_label = ?').run(fileId, label);
+    removeIfOrphan(previous.speaker_id);
+  });
+  const shown = meeting.segments.find((x) => x.label === label)?.speaker;
+  const revert = !!shown && shown !== label;
+  if (revert) syncChain = syncChain.then(() => revertInPlaud(fileId, label, shown)).catch(() => {});
+  return { label, plaudReverting: revert };
+}
+
+async function revertInPlaud(fileId, label, shown) {
+  try {
+    const t0 = Date.now();
+    const r = await updateSpeakerNames(fileId, [{ from: shown, to: label }]);
+    console.log(`Speaker name "${shown}" reverted to "${label}" in Plaud in ${((Date.now() - t0) / 1000).toFixed(1)}s (via ${r.via})`);
+    const meeting = await getMeeting(fileId);
+    for (const s of meeting.segments) if (s.label === label) s.speaker = label;
+    bus.emit('speakers-synced', fileId, [label]);
+  } catch (err) {
+    console.error(`Couldn't revert "${shown}" to "${label}" in Plaud for ${fileId}: ${err.message}`);
+  }
+}
+
 function removeIfOrphan(speakerId) {
   const used = db.prepare(`SELECT (SELECT COUNT(*) FROM voice_prints WHERE speaker_id = ?) +
                                   (SELECT COUNT(*) FROM meeting_speakers WHERE speaker_id = ?) AS n`).get(speakerId, speakerId);

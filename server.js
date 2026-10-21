@@ -164,6 +164,15 @@ app.post('/api/meetings/:id/speakers/:label', async (req, res) => {
   }
 });
 
+// Clears a label's name (here and, if Plaud shows one, back to Plaud's label there).
+app.delete('/api/meetings/:id/speakers/:label', async (req, res) => {
+  try {
+    res.json({ ok: true, data: await speakers.unassignSpeaker(req.params.id, req.params.label) });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // Status of pushing this meeting's names to the Plaud website; POST retries.
 app.get('/api/meetings/:id/plaud-sync', (req, res) => res.json({ ok: true, data: speakers.plaudSyncStatus(req.params.id) }));
 app.post('/api/meetings/:id/plaud-sync', (req, res) => {
