@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Folders &amp; Tags · Plaud2KeepIt</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="3" y="9" width="2.4" height="6" rx="1.2"/><rect x="7.4" y="5" width="2.4" height="14" rx="1.2"/><rect x="11.8" y="7.5" width="2.4" height="9" rx="1.2"/><rect x="16.2" y="3.5" width="2.4" height="17" rx="1.2"/><rect x="20.6" y="10" width="2.4" height="4" rx="1.2"/></svg>
+      </span>
+      Plaud2KeepIt
+    </a>
+    <nav class="nav">
+      <a href="/">Meetings</a>
+      <a href="/settings" class="active">Settings</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <a class="back-link" href="/settings">← Settings</a>
+  <div class="page-head">
+    <div>
+      <h1>Folders &amp; Tags</h1>
+      <p id="subtitle" class="subtitle">&nbsp;</p>
+    </div>
+  </div>
+
+  <div class="lib-grid">
+    <div class="lib-side">
+      <section class="panel lib-folders">
+        <div class="lib-panel-head">
+          <h2>Folders</h2>
+          <button class="btn small" type="button" id="newFolder">+ New folder</button>
+        </div>
+        <div id="tree" class="lib-tree" role="tree"></div>
+      </section>
+
+      <section class="panel lib-tags">
+        <div class="lib-panel-head">
+          <h2>Tags</h2>
+          <span class="me-hint">Bigger = used more</span>
+        </div>
+        <div id="cloud" class="lib-cloud"></div>
+      </section>
+    </div>
+
+    <section class="panel lib-detail" id="detail"></section>
+  </div>
+</main>
+
+<dialog id="libDialog" class="vp-confirm">
+  <form method="dialog">
+    <h3 id="libDialogTitle"></h3>
+    <div id="libDialogBody" class="vp-confirm-body"></div>
+    <div class="vp-confirm-actions">
+      <button value="cancel" class="btn" type="submit" formnovalidate>Cancel</button>
+      <button value="ok" class="btn primary" type="submit" id="libDialogOk"></button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/library.js" type="module"></script>
+</body>
+</html>

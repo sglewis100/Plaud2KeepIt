@@ -1,0 +1,41 @@
+{
+  "name": "plaud2keepit",
+  "version": "1.0.0",
+  "description": "Local web app that brings Plaud meeting recordings into Keep It: speaker identification by voice, titles, tags, nested folders, and two-way sync of summaries, transcripts, highlights and mind maps.",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "server.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sglewis100/Plaud2KeepIt.git"
+  },
+  "homepage": "https://github.com/sglewis100/Plaud2KeepIt#readme",
+  "os": [
+    "darwin"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "service:install": "sh service/install.sh",
+    "service:uninstall": "sh service/uninstall.sh",
+    "service:restart": "launchctl kickstart -k gui/$(id -u)/com.plaud2keepit.server",
+    "service:status": "launchctl print gui/$(id -u)/com.plaud2keepit.server | grep -E \"state|pid|last exit\"",
+    "service:logs": "tail -f logs/server.log"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@plaud-ai/mcp": "0.3.14",
+    "d3": "^7.9.0",
+    "express": "^5.3.0",
+    "marked": "^18.1.1",
+    "markmap-view": "^0.18.12",
+    "ogg-opus-decoder": "^1.7.5",
+    "puppeteer": "^25.15.0",
+    "sherpa-onnx-node": "^1.13.8"
+  }
+}

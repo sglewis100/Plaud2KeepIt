@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Meetings · Plaud2KeepIt</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="3" y="9" width="2.4" height="6" rx="1.2"/><rect x="7.4" y="5" width="2.4" height="14" rx="1.2"/><rect x="11.8" y="7.5" width="2.4" height="9" rx="1.2"/><rect x="16.2" y="3.5" width="2.4" height="17" rx="1.2"/><rect x="20.6" y="10" width="2.4" height="4" rx="1.2"/></svg>
+      </span>
+      Plaud2KeepIt
+    </a>
+    <nav class="nav">
+      <a href="/" class="active">Meetings</a>
+      <a href="/settings">Settings</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <div class="page-head">
+    <div>
+      <h1>Meetings</h1>
+      <p id="subtitle" class="subtitle">&nbsp;</p>
+    </div>
+    <div class="head-actions">
+    <label class="switch" title="Hide meetings that are fully in Keep It (partially synced ones stay visible)">
+      <input type="checkbox" id="hideSynced"><span class="switch-track"></span> Hide synced
+    </label>
+    <button id="reload" class="btn ghost" title="Refresh list">
+      <svg viewBox="0 0 24 24" class="icon"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Refresh
+    </button>
+    </div>
+  </div>
+
+  <section class="panel filters">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-mode="range" class="tab">
+        <svg viewBox="0 0 24 24" class="icon"><rect x="3.5" y="5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Date range
+      </button>
+      <button role="tab" data-mode="last" class="tab">
+        <svg viewBox="0 0 24 24" class="icon"><path d="M5 7h14M5 12h14M5 17h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Most recent
+      </button>
+      <button role="tab" data-mode="search" class="tab">
+        <svg viewBox="0 0 24 24" class="icon"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Search
+      </button>
+    </div>
+
+    <div class="mode" data-for="range">
+      <div class="chips" id="rangeChips">
+        <button class="chip" data-range="today">Today</button>
+        <button class="chip" data-range="week">This Week</button>
+        <button class="chip" data-range="2weeks">Last Two Weeks</button>
+        <button class="chip" data-range="month">Last Month</button>
+        <button class="chip" data-range="6months">Last Six Months</button>
+        <button class="chip" data-range="custom">Custom…</button>
+      </div>
+      <form class="custom" id="rangeCustom" hidden>
+        <label>From <input type="date" id="rangeFrom" required></label>
+        <label>To <input type="date" id="rangeTo" required></label>
+        <button class="btn primary" type="submit">Apply</button>
+      </form>
+      <p class="hint" id="rangeHint"></p>
+    </div>
+
+    <div class="mode" data-for="last" hidden>
+      <div class="chips" id="lastChips">
+        <button class="chip" data-n="10">Last 10</button>
+        <button class="chip" data-n="25">Last 25</button>
+        <button class="chip" data-n="50">Last 50</button>
+        <button class="chip" data-n="100">Last 100</button>
+        <button class="chip" data-n="250">Last 250</button>
+        <button class="chip" data-n="custom">Custom…</button>
+      </div>
+      <form class="custom" id="lastCustom" hidden>
+        <label>Number of meetings <input type="number" id="lastN" min="1" max="500" step="1" required></label>
+        <button class="btn primary" type="submit">Apply</button>
+        <span class="hint inline">1 – 500</span>
+      </form>
+    </div>
+
+    <div class="mode" data-for="search" hidden>
+      <form class="search" id="searchForm">
+        <svg viewBox="0 0 24 24" class="icon"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input type="search" id="searchInput" placeholder="Search meetings by name…" autocomplete="off">
+        <button class="btn primary" type="submit">Search</button>
+      </form>
+      <p class="hint">Matches anywhere in the meeting name, ignoring case. Plaud searches your newest 500 recordings.</p>
+    </div>
+  </section>
+
+  <section class="stats" id="stats" hidden>
+    <div class="stat"><span class="stat-label">Meetings</span><span class="stat-value" id="statCount">–</span></div>
+    <div class="stat"><span class="stat-label">Total time</span><span class="stat-value" id="statTotal">–</span></div>
+    <div class="stat"><span class="stat-label">Average</span><span class="stat-value" id="statAvg">–</span></div>
+    <div class="stat"><span class="stat-label">Longest</span><span class="stat-value" id="statMax">–</span></div>
+  </section>
+
+  <div id="notice" class="notice" hidden></div>
+  <section id="results" class="results"></section>
+</main>
+
+<template id="skeleton">
+  <div class="day"><div class="day-head"><span class="sk sk-day"></span></div>
+    <div class="list">
+      <div class="mrow"><span class="sk sk-time"></span><span class="sk sk-title"></span><span class="sk sk-pill"></span></div>
+      <div class="mrow"><span class="sk sk-time"></span><span class="sk sk-title short"></span><span class="sk sk-pill"></span></div>
+      <div class="mrow"><span class="sk sk-time"></span><span class="sk sk-title"></span><span class="sk sk-pill"></span></div>
+    </div>
+  </div>
+</template>
+
+<script src="/meetings.js" type="module"></script>
+</body>
+</html>

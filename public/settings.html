@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings · Plaud2KeepIt</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    :root {
+      --bg: #f6f7f9; --card: #fff; --text: #1d2330; --muted: #6b7280; --border: #e3e6eb;
+      --accent: #2563eb; --ok: #15803d; --warn: #b45309; --err: #b91c1c;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #12151b; --card: #1b1f27; --text: #e7e9ee; --muted: #9aa3b2; --border: #2a303b;
+        --accent: #60a5fa; --ok: #4ade80; --warn: #fbbf24; --err: #f87171;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    main { max-width: 640px; margin: 28px auto; padding: 0 20px; }
+    h1 { font-size: 24px; margin: 0 0 24px; }
+    nav a { color: var(--accent); text-decoration: none; font-size: 14px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+    .card h2 { font-size: 16px; margin: 0 0 12px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .status { display: flex; align-items: center; gap: 8px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+    .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.err { background: var(--err); }
+    .dot.pulse { animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: .3; } }
+    .meta { color: var(--muted); font-size: 13px; margin-top: 8px; }
+    .actions { display: flex; gap: 8px; }
+    button { font: inherit; border-radius: 8px; padding: 7px 14px; cursor: pointer;
+      border: 1px solid var(--border); background: var(--card); color: var(--text); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button:disabled { opacity: .5; cursor: default; }
+    .card + .card { margin-top: 16px; }
+    .card p.hint { color: var(--muted); font-size: 13px; margin: -6px 0 12px; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="3" y="9" width="2.4" height="6" rx="1.2"/><rect x="7.4" y="5" width="2.4" height="14" rx="1.2"/><rect x="11.8" y="7.5" width="2.4" height="9" rx="1.2"/><rect x="16.2" y="3.5" width="2.4" height="17" rx="1.2"/><rect x="20.6" y="10" width="2.4" height="4" rx="1.2"/></svg>
+      </span>
+      Plaud2KeepIt
+    </a>
+    <nav class="nav">
+      <a href="/">Meetings</a>
+      <a href="/settings" class="active">Settings</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <h1>Settings</h1>
+
+  <section class="card">
+    <h2>Plaud website</h2>
+    <p class="hint">Browser session, used for tasks MCP can't do.</p>
+    <div class="row">
+      <div class="status"><span id="dot" class="dot pulse"></span><span id="label">Checking…</span></div>
+      <div class="actions">
+        <button id="refresh">Re-check</button>
+        <button id="login" class="primary" hidden>Log in to Plaud</button>
+        <button id="cancel" hidden>Cancel login</button>
+        <button id="logout" hidden>Log out</button>
+      </div>
+    </div>
+    <div id="meta" class="meta"></div>
+  </section>
+
+  <section class="card">
+    <h2>Plaud MCP</h2>
+    <p class="hint">Plaud's official MCP server, used to read recordings, notes and transcripts.</p>
+    <div class="row">
+      <div class="status"><span id="mDot" class="dot pulse"></span><span id="mLabel">Checking…</span></div>
+      <div class="actions">
+        <button id="mRefresh">Re-check</button>
+        <button id="mLogin" class="primary" hidden>Sign in</button>
+        <button id="mLogout" hidden>Sign out</button>
+      </div>
+    </div>
+    <div id="mMeta" class="meta"></div>
+  </section>
+
+  <section class="card">
+    <h2>Voice prints</h2>
+    <p class="hint">The people Plaud2KeepIt recognizes by voice. Rename someone or delete a bad voice print.</p>
+    <div class="row">
+      <div class="status"><span class="dot ok" id="vDot"></span><span id="vLabel">Loading…</span></div>
+      <div class="actions"><a class="btn primary small" href="/voiceprints">Manage voice prints</a></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Keep It</h2>
+    <p class="hint">Meetings sent to Keep It are checked every 30 minutes while Keep It is open: moved, retagged or deleted items are picked up, and changes made here are applied there.</p>
+    <div class="row">
+      <div class="status"><span class="dot" id="kDot"></span><span id="kLabel">Loading…</span></div>
+      <div class="actions"><button id="kCheck" class="btn primary small" type="button">Check Keep It now</button></div>
+    </div>
+    <div id="kMeta" class="meta"></div>
+  </section>
+
+  <section class="card">
+    <h2>Folders &amp; tags</h2>
+    <p class="hint">Organize meetings into nested folders and tags. Browse, rename, move or delete them.</p>
+    <div class="row">
+      <div class="status"><span class="dot ok" id="lDot"></span><span id="lLabel">Loading…</span></div>
+      <div class="actions"><a class="btn primary small" href="/library">Open folders &amp; tags</a></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let pollTimer = null;
+
+  function render(s) {
+    const dot = $('dot');
+    dot.className = 'dot';
+    $('login').hidden = true;
+    $('cancel').hidden = true;
+    $('logout').hidden = true;
+    $('refresh').disabled = false;
+    $('meta').textContent = s.checkedAt ? `Last checked ${new Date(s.checkedAt).toLocaleString()}` : '';
+
+    if (s.checking || s.loggingOut) {
+      dot.classList.add('pulse');
+      $('label').textContent = s.loggingOut ? 'Signing out…' : 'Checking…';
+      $('refresh').disabled = true;
+    } else if (s.loginInProgress) {
+      dot.classList.add('warn', 'pulse');
+      $('label').textContent = 'Waiting for you to sign in in the Chrome window…';
+      $('cancel').hidden = false;
+      $('refresh').disabled = true;
+    } else if (s.error) {
+      dot.classList.add('err');
+      $('label').textContent = `${s.errorPrefix || "Couldn't check status"}: ${s.error}`;
+    } else if (s.loggedIn) {
+      dot.classList.add('ok');
+      $('label').textContent = 'Logged in to Plaud';
+      $('logout').hidden = false;
+    } else {
+      dot.classList.add('err');
+      $('label').textContent = 'Not logged in';
+      $('login').hidden = false;
+    }
+    if (s.loginError) $('meta').textContent += ` · Last login attempt: ${s.loginError}`;
+  }
+
+  async function check() {
+    render({ checking: true });
+    try {
+      const s = await (await fetch('/api/plaud/status')).json();
+      render(s.ok ? s : { error: s.error });
+      if (s.loginInProgress) schedulePoll();
+    } catch (err) {
+      render({ error: err.message });
+    }
+  }
+
+  function schedulePoll() {
+    clearTimeout(pollTimer);
+    pollTimer = setTimeout(async () => {
+      const s = await (await fetch('/api/plaud/status')).json().catch(() => null);
+      if (s?.loginInProgress) { render(s); schedulePoll(); }
+      else check(); // window closed: do a fresh headless check
+    }, 1500);
+  }
+
+  $('refresh').onclick = check;
+
+  $('login').onclick = async () => {
+    $('login').disabled = true;
+    const r = await (await fetch('/api/plaud/login', { method: 'POST' })).json().catch((e) => ({ error: e.message }));
+    $('login').disabled = false;
+    if (!r.ok) return render({ error: r.error });
+    render({ loginInProgress: true });
+    schedulePoll();
+  };
+
+  $('logout').onclick = async () => {
+    if (!confirm('Sign out of Plaud?')) return;
+    render({ loggingOut: true });
+    const r = await (await fetch('/api/plaud/logout', { method: 'POST' })).json().catch((e) => ({ error: e.message }));
+    render(r.ok ? r : { error: r.error, errorPrefix: "Couldn't log out" });
+  };
+
+  $('cancel').onclick = async () => {
+    await fetch('/api/plaud/login/cancel', { method: 'POST' });
+  };
+
+  check();
+
+  // ---- Plaud MCP card ----
+  let mPollTimer = null;
+
+  function mRender(s) {
+    const dot = $('mDot');
+    dot.className = 'dot';
+    $('mLogin').hidden = true;
+    $('mLogout').hidden = true;
+    $('mRefresh').disabled = false;
+    $('mMeta').textContent = '';
+
+    if (s.checking) {
+      dot.classList.add('pulse');
+      $('mLabel').textContent = s.checking;
+      $('mRefresh').disabled = true;
+    } else if (s.loginInProgress) {
+      dot.classList.add('warn', 'pulse');
+      $('mLabel').textContent = 'Finish signing in in your browser (click Authorize)…';
+      $('mRefresh').disabled = true;
+    } else if (s.error) {
+      dot.classList.add('err');
+      $('mLabel').textContent = `MCP error: ${s.error}`;
+    } else if (s.signedIn) {
+      dot.classList.add('ok');
+      const u = s.user || {};
+      const who = u.email || u.name || u.nickname || u.username;
+      $('mLabel').textContent = who ? `Signed in as ${who}` : 'Signed in';
+      $('mLogout').hidden = false;
+    } else {
+      dot.classList.add('err');
+      $('mLabel').textContent = 'Not signed in';
+      $('mLogin').hidden = false;
+    }
+    if (s.loginError) $('mMeta').textContent = `Last sign-in attempt: ${s.loginError}`;
+  }
+
+  async function mFetch(url, opts) {
+    const r = await (await fetch(url, opts)).json().catch((e) => ({ ok: false, error: e.message }));
+    if (!r.ok) throw new Error(r.error);
+    return r.data;
+  }
+
+  async function mCheck() {
+    mRender({ checking: 'Checking…' });
+    try {
+      const s = await mFetch('/api/mcp/status');
+      mRender(s);
+      if (s.loginInProgress) mSchedulePoll();
+    } catch (err) {
+      mRender({ error: err.message });
+    }
+  }
+
+  function mSchedulePoll() {
+    clearTimeout(mPollTimer);
+    mPollTimer = setTimeout(mCheck, 2000);
+  }
+
+  $('mRefresh').onclick = mCheck;
+
+  $('mLogin').onclick = async () => {
+    try {
+      await mFetch('/api/mcp/login', { method: 'POST' });
+      mRender({ loginInProgress: true });
+      mSchedulePoll();
+    } catch (err) {
+      mRender({ error: err.message });
+    }
+  };
+
+  $('mLogout').onclick = async () => {
+    if (!confirm('Sign out of Plaud MCP? This revokes its authorization.')) return;
+    mRender({ checking: 'Signing out…' });
+    try {
+      mRender(await mFetch('/api/mcp/logout', { method: 'POST' }));
+    } catch (err) {
+      mRender({ error: err.message });
+    }
+  };
+
+  mCheck();
+
+  fetch('/api/voiceprints').then((r) => r.json()).then((r) => {
+    const people = r.data || [];
+    const prints = people.reduce((n, p) => n + p.prints.length, 0);
+    $('vLabel').textContent = `${people.length} ${people.length === 1 ? 'person' : 'people'} · ${prints} voice print${prints === 1 ? '' : 's'}`;
+    if (!people.length) $('vDot').className = 'dot';
+  }).catch(() => { $('vLabel').textContent = 'Couldn’t load'; });
+
+  // ---- Keep It card ----
+  const ago = (iso) => {
+    if (!iso) return 'never';
+    const m = Math.round((Date.now() - new Date(iso)) / 60000);
+    return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : new Date(iso).toLocaleString();
+  };
+  function kRender(o, note) {
+    const c = o.counts;
+    const parts = [`${c.full} in Keep It`, c.partial && `${c.partial} partially`, c.none && `${c.none} removed from Keep It`, c.sending && `${c.sending} sending`, c.failed && `${c.failed} failed`].filter(Boolean);
+    $('kLabel').textContent = o.meetings ? `${o.meetings} meeting${o.meetings === 1 ? '' : 's'} sent · ${parts.join(' · ')}` : 'No meetings sent yet';
+    $('kDot').className = `dot ${!o.health.ok ? 'err' : c.partial ? 'warn' : o.meetings ? 'ok' : ''}`;
+    const last = o.lastCheck;
+    const lines = [];
+    if (!o.health.ok) lines.push(`⚠️ ${o.health.message}`);
+    else if (!o.running) lines.push('Keep It isn’t open, so it won’t be checked until it is.');
+    if (last?.at) lines.push(`Last checked ${ago(last.at)}${last.checked != null ? ` (${last.checked} meeting${last.checked === 1 ? '' : 's'}${last.failed ? `, ${last.failed} failed` : ''})` : last.skipped ? ` — ${last.skipped}` : ''}`);
+    if (note) lines.push(note);
+    $('kMeta').textContent = lines.join(' · ');
+  }
+  async function kLoad(note) {
+    try {
+      const r = await (await fetch('/api/keepit/overview')).json();
+      if (r.ok) kRender(r.data, note);
+    } catch { $('kLabel').textContent = 'Couldn’t load'; }
+  }
+  $('kCheck').onclick = async () => {
+    $('kCheck').disabled = true;
+    $('kCheck').textContent = 'Checking…';
+    try {
+      const r = await (await fetch('/api/keepit/check', { method: 'POST' })).json();
+      const d = r.data || {};
+      await kLoad(r.ok ? (d.skipped ? `Not checked: ${d.skipped}` : d.notResponding ? 'Stopped: Keep It isn’t responding' : 'Check complete') : r.error);
+    } finally {
+      $('kCheck').disabled = false;
+      $('kCheck').textContent = 'Check Keep It now';
+    }
+  };
+  kLoad();
+
+  fetch('/api/library').then((r) => r.json()).then((r) => {
+    const { folders = [], tags = [] } = r.data || {};
+    $('lLabel').textContent = `${folders.length} folder${folders.length === 1 ? '' : 's'} · ${tags.length} tag${tags.length === 1 ? '' : 's'}`;
+    if (!folders.length && !tags.length) $('lDot').className = 'dot';
+  }).catch(() => { $('lLabel').textContent = 'Couldn’t load'; });
+</script>
+</body>
+</html>

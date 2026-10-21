@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Voice Prints · Plaud2KeepIt</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="3" y="9" width="2.4" height="6" rx="1.2"/><rect x="7.4" y="5" width="2.4" height="14" rx="1.2"/><rect x="11.8" y="7.5" width="2.4" height="9" rx="1.2"/><rect x="16.2" y="3.5" width="2.4" height="17" rx="1.2"/><rect x="20.6" y="10" width="2.4" height="4" rx="1.2"/></svg>
+      </span>
+      Plaud2KeepIt
+    </a>
+    <nav class="nav">
+      <a href="/">Meetings</a>
+      <a href="/settings" class="active">Settings</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <a class="back-link" href="/settings">← Settings</a>
+  <div class="page-head">
+    <div>
+      <h1>Voice Prints</h1>
+      <p id="subtitle" class="subtitle">&nbsp;</p>
+    </div>
+  </div>
+
+  <section class="panel">
+    <form class="search" id="vpSearch" onsubmit="return false">
+      <svg viewBox="0 0 24 24" class="icon"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <input type="search" id="vpQuery" placeholder="Search by person or meeting…" autocomplete="off">
+    </form>
+  </section>
+
+  <div id="notice" class="notice" hidden></div>
+  <section id="people" class="vp-people"></section>
+</main>
+
+<div id="vpBar" class="vp-bar" hidden>
+  <span id="vpBarText"></span>
+  <button class="btn small" type="button" id="vpClear">Clear</button>
+  <button class="btn primary small" type="button" id="vpMerge">Merge…</button>
+</div>
+
+<dialog id="vpConfirm" class="vp-confirm">
+  <form method="dialog">
+    <h3 id="vpConfirmTitle"></h3>
+    <div id="vpConfirmBody" class="vp-confirm-body"></div>
+    <div class="vp-confirm-actions">
+      <button value="cancel" class="btn" type="submit">Cancel</button>
+      <button value="ok" class="btn primary" type="submit" id="vpConfirmOk"></button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/voiceprints.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Your data — never commit (recordings' audio, voice prints, sync state)
+data/
+
+# Logged-in Plaud browser profile — never commit
+.chrome-profile/
+
+# Downloaded by `npm run setup`
+models/
+
+# Runtime output
+logs/
+.debug/
+
+.DS_Store
