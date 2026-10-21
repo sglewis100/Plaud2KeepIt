@@ -628,3 +628,14 @@ body.has-bar .page { padding-bottom: 110px; }
 .sp-keepit-note { margin-left: 8px; text-transform: none; letter-spacing: 0; font-size: 11px; vertical-align: 1px; }
 .sp-apply.with-keepit { box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 35%, transparent), 0 2px 8px color-mix(in srgb, var(--ok) 35%, transparent); }
 .kp-icon.check { background: color-mix(in srgb, var(--ok) 15%, var(--surface)); color: var(--ok); }
+
+/* "Speaker Matching" heading in the Edit dialog (matches the Title/Tags/Folder labels) */
+.sp-section-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 16px 22px 0; background: var(--surface); }
+.sp-section-title { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.sp-match-status { font-size: 13px; font-weight: 600; }
+.sp-match-status.done { color: var(--ok); }
+.sp-match-status.pending { color: var(--warn); }
+.sp-match-status.done::before { content: "✓ "; }
+.sp-match-status.pending::before { content: "● "; }
+.sp-player { padding-top: 10px; }
+@media (max-width: 720px) { .sp-section-head { padding-left: 16px; padding-right: 16px; } }

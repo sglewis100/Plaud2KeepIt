@@ -247,6 +247,10 @@ class SpeakerView {
 
     const body = this.root.querySelector('.sp-main');
     body.innerHTML = `
+      <div class="sp-section-head">
+        <span class="sp-section-title">Speaker Matching</span>
+        <span class="sp-match-status"></span>
+      </div>
       <section class="sp-player">
         <audio preload="auto" src="/api/meetings/${encodeURIComponent(meeting.id)}/audio"></audio>
         <div class="sp-controls">
@@ -533,7 +537,22 @@ class SpeakerView {
     card.querySelectorAll('.sp-clip-play').forEach((b) => b.addEventListener('click', () => this.toggleClip(b)));
   }
 
+  // A speaker is matched once it has a real name: saved/confirmed here, or
+  // already named in Plaud. Generic labels ("Speaker 2") still need matching.
+  updateMatchStatus() {
+    const el = this.root.querySelector('.sp-match-status');
+    if (!el) return;
+    const generic = (n) => /^speaker\s*\d+$/i.test(n || '');
+    const pending = this.data.speakers.filter((x) => !x.assignment && generic(x.displayName));
+    el.className = `sp-match-status ${pending.length ? 'pending' : 'done'}`;
+    el.textContent = pending.length
+      ? `Some Speakers Require Matching (${pending.length} of ${this.data.speakers.length})`
+      : 'All Speakers Matched';
+    el.title = pending.length ? `Still unnamed: ${pending.map((x) => x.label).join(', ')}` : '';
+  }
+
   updateCard(s) {
+    this.updateMatchStatus();
     const card = this.card(s.label);
     // Once identified, show the person's name; keep Plaud's label as a note.
     const title = this.nameFor(s.label);
