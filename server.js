@@ -81,12 +81,14 @@ app.get('/api/meetings', mcpRoute(async (req) => {
   // Add local tags/folder; show a title edited here until Plaud has it.
   const meta = library.metaFor(result.meetings.map((m) => m.id));
   const sent = keepit.sentMap(result.meetings.map((m) => m.id));
+  const ignored = library.ignoredSet(result.meetings.map((m) => m.id));
   result.meetings = result.meetings.map((m) => {
     const x = meta.get(m.id);
     const keepIt = sent.get(m.id) || null;
-    if (!x) return { ...m, tags: [], folderPath: null, folderId: null, keepIt };
+    const isIgnored = ignored.has(m.id);
+    if (!x) return { ...m, tags: [], folderPath: null, folderId: null, keepIt, ignored: isIgnored };
     if (x.titleSync === 'done' && x.title !== m.name) library.plaudTitleSeen(m.id, m.name);
-    return { ...m, plaudName: m.name, name: x.titleSync === 'done' ? m.name : x.title, titleSync: x.titleSync, tags: x.tags, folderPath: x.folderPath, folderId: x.folderId, keepIt };
+    return { ...m, plaudName: m.name, name: x.titleSync === 'done' ? m.name : x.title, titleSync: x.titleSync, tags: x.tags, folderPath: x.folderPath, folderId: x.folderId, keepIt, ignored: isIgnored };
   });
   return result;
 }));
@@ -110,6 +112,8 @@ app.get('/api/library/meetings', libRoute((req) => library.libraryMeetings({ fol
 app.get('/api/meetings/:id/meta', libRoute((req) => library.meetingMeta(req.params.id)));
 // Body: { title, folderId, tags: [names], plaudTitle, startAt, durationMs }
 app.put('/api/meetings/:id/meta', libRoute((req) => library.saveMeetingMeta(req.params.id, req.body || {})));
+// Body: { ignored: true|false, title? }  (hide a meeting you won't import)
+app.put('/api/meetings/:id/ignore', libRoute((req) => library.setIgnored(req.params.id, req.body || {})));
 app.post('/api/meetings/:id/meta/retry', libRoute((req) => library.retryTitle(req.params.id)));
 app.post('/api/folders', libRoute((req) => library.createFolder(req.body || {})));
 // Body: { name?, parentId? }  (parentId null = top level)

@@ -43,6 +43,28 @@ db.exec(`
   );
 `);
 
+// Meetings you've chosen not to import: hidden from the list unless "Show
+// ignored" is on. Kept apart from "meetings" so ignoring needs no other data.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS ignored_meetings (
+    file_id    TEXT PRIMARY KEY,
+    title      TEXT,
+    ignored_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+`);
+
+export function ignoredSet(fileIds) {
+  if (!fileIds.length) return new Set();
+  const marks = fileIds.map(() => '?').join(',');
+  return new Set(db.prepare(`SELECT file_id FROM ignored_meetings WHERE file_id IN (${marks})`).all(...fileIds).map((r) => r.file_id));
+}
+
+export function setIgnored(fileId, { ignored, title = null } = {}) {
+  if (ignored) db.prepare('INSERT INTO ignored_meetings (file_id, title) VALUES (?, ?) ON CONFLICT (file_id) DO NOTHING').run(fileId, title);
+  else db.prepare('DELETE FROM ignored_meetings WHERE file_id = ?').run(fileId);
+  return { ignored: !!ignored };
+}
+
 const MAX_NAME = 60;
 const cleanName = (s, what) => {
   const name = String(s ?? '').trim().replace(/\s+/g, ' ');

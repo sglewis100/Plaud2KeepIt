@@ -10,7 +10,7 @@ const STORE_KEY = 'p2k.meetings.filter';
 // ---- State (remembered per browser) ----
 
 // listMode: the tab to return to when a search is cleared.
-const defaults = { listMode: 'range', mode: 'range', range: 'week', from: null, to: null, n: 25, q: '', hideSynced: false };
+const defaults = { listMode: 'range', mode: 'range', range: 'week', from: null, to: null, n: 25, q: '', hideSynced: false, showIgnored: false };
 let state = { ...defaults, ...load() };
 
 function load() {
@@ -205,6 +205,13 @@ $('#hideSynced').addEventListener('change', (e) => {
   if (lastData) render(lastData);
 });
 
+$('#showIgnored').checked = !!state.showIgnored;
+$('#showIgnored').addEventListener('change', (e) => {
+  state.showIgnored = e.target.checked;
+  save();
+  if (lastData) render(lastData);
+});
+
 // ---- Loading & rendering ----
 
 let requestId = 0;
@@ -247,9 +254,13 @@ const fullyInKeepIt = (m) => m.keepIt?.sync === 'full' && m.keepIt?.status !== '
 function render(data) {
   lastData = data;
   const { complete, note, scannedBackTo } = data;
-  // "Hide synced items": hide meetings fully in Keep It (partial ones stay).
-  const hidden = state.hideSynced ? data.meetings.filter(fullyInKeepIt).length : 0;
-  const meetings = state.hideSynced ? data.meetings.filter((m) => !fullyInKeepIt(m)) : data.meetings;
+  // "Hide synced": hide meetings fully in Keep It (partial ones stay).
+  // Ignored meetings stay hidden unless "Show ignored" is on.
+  const hideIgnored = (m) => m.ignored && !state.showIgnored;
+  const hideInKeepIt = (m) => state.hideSynced && fullyInKeepIt(m);
+  const ignoredHidden = data.meetings.filter(hideIgnored).length;
+  const hidden = data.meetings.filter((m) => !hideIgnored(m) && hideInKeepIt(m)).length;
+  const meetings = data.meetings.filter((m) => !hideIgnored(m) && !hideInKeepIt(m));
   meetingsById = new Map(data.meetings.map((m) => [m.id, m]));
   if (!meetingsById.has(selectedId)) selectedId = null;
   const durations = meetings.map((m) => m.durationMs).filter((d) => d != null);
@@ -261,7 +272,7 @@ function render(data) {
   $('#statAvg').textContent = durations.length ? fmtDuration(total / durations.length) : '—';
   $('#statMax').textContent = max ? fmtDuration(max) : '—';
   $('#stats').hidden = false;
-  $('#subtitle').textContent = `${describe()} · ${meetings.length} meeting${meetings.length === 1 ? '' : 's'}${hidden ? ` · ${hidden} already in Keep It hidden` : ''}`;
+  $('#subtitle').textContent = `${describe()} · ${meetings.length} meeting${meetings.length === 1 ? '' : 's'}${hidden ? ` · ${hidden} already in Keep It hidden` : ''}${ignoredHidden ? ` · ${ignoredHidden} ignored` : ''}`;
 
   if (state.mode === 'search' && complete === false) {
     const back = scannedBackTo ? ` Searched back to ${fmtDate(new Date(scannedBackTo), { year: 'numeric' })}.` : '';
@@ -272,8 +283,8 @@ function render(data) {
     $('#results').innerHTML = `
       <div class="empty">
         <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        <strong>${hidden ? 'Everything here is in Keep It' : 'No meetings found'}</strong>
-        ${hidden ? 'Turn off “Hide synced” to see them.' : state.mode === 'search' ? 'Try a different search term.' : 'Try a wider range.'}
+        <strong>${hidden ? 'Everything here is in Keep It' : ignoredHidden ? 'Everything here is ignored' : 'No meetings found'}</strong>
+        ${hidden ? 'Turn off “Hide synced” to see them.' : ignoredHidden ? 'Turn on “Show ignored” to see them.' : state.mode === 'search' ? 'Try a different search term.' : 'Try a wider range.'}
       </div>`;
     return;
   }
@@ -313,6 +324,7 @@ function rowHtml(m, max, q) {
   if (created) meta.push(`<span title="${esc(created.toLocaleString())}">Uploaded ${esc(sameDay(created, start) ? fmtTime(created) : `${fmtDate(created)}, ${fmtTime(created)}`)}</span>`);
   if (m.serialNumber) meta.push(`<span>Device ${esc(m.serialNumber)}</span>`);
   const org = [];
+  if (m.ignored) org.push('<span class="badge" title="Hidden from the list unless “Show ignored” is on">Ignored</span>');
   if (['queued', 'syncing'].includes(m.titleSync)) org.push('<span class="badge accent"><span class="spinner tiny"></span> Renaming in Plaud…</span>');
   if (m.titleSync === 'failed') org.push('<span class="badge warn" title="Open Edit to try again">Plaud title update failed</span>');
   const k = m.keepIt;
@@ -324,7 +336,7 @@ function rowHtml(m, max, q) {
   if (m.folderPath) org.push(`<span class="org-folder" title="Folder"><svg viewBox="0 0 24 24" class="icon xs"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>${esc(m.folderPath)}</span>`);
   for (const t of m.tags || []) org.push(`<span class="org-tag">${esc(t)}</span>`);
   return `
-    <div class="mrow${m.id === selectedId ? ' selected' : ''}" data-id="${esc(m.id)}" tabindex="0">
+    <div class="mrow${m.id === selectedId ? ' selected' : ''}${m.ignored ? ' ignored' : ''}" data-id="${esc(m.id)}" tabindex="0">
       <div class="time">${esc(fmtTime(start))}${end ? `<small>to ${esc(fmtTime(end))}</small>` : ''}</div>
       <div class="title">
         <div class="title-text" title="${esc(m.name)}">${highlight(m.name || 'Untitled', q)}</div>
@@ -342,6 +354,11 @@ function rowHtml(m, max, q) {
         <button type="button" class="btn small" data-action="keepit">
           ${KEEPIT_ICON}
           Send to Keep It
+        </button>
+        <button type="button" class="btn small ghost" data-action="ignore" title="${m.ignored ? 'Show this meeting in the list again' : 'Hide this meeting from the list (you won’t import it)'}">
+          ${m.ignored
+            ? '<svg viewBox="0 0 24 24" class="icon"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg> Un-ignore'
+            : '<svg viewBox="0 0 24 24" class="icon"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m4 4 16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Ignore'}
         </button>
       </div>
       <button type="button" class="row-id" data-copy="${esc(m.id)}" title="Copy recording ID">${esc(m.id)}</button>
@@ -361,6 +378,13 @@ $('#results').addEventListener('click', async (e) => {
   if (e.target.closest('[data-action="edit"]')) {
     const m = meetingsById.get(row.dataset.id);
     return openSpeakerDialog(m, { onSaved: (meta) => applyMeta(m, meta) });
+  }
+  if (e.target.closest('[data-action="ignore"]')) {
+    const m = meetingsById.get(row.dataset.id);
+    const btn = e.target.closest('[data-action="ignore"]');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    return setIgnored(m, !m.ignored).finally(() => { btn.disabled = false; });
   }
   if (e.target.closest('[data-action="keepit"]')) {
     const m = meetingsById.get(row.dataset.id);
@@ -404,6 +428,30 @@ $('#results').addEventListener('keydown', (e) => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && selectedId && !document.querySelector('dialog[open]')) select(null);
 });
+
+// Ignore (hide) or un-ignore a meeting. A newly ignored meeting fades out of
+// the list unless "Show ignored" is on.
+async function setIgnored(m, ignored) {
+  try {
+    const r = await fetch(`/api/meetings/${encodeURIComponent(m.id)}/ignore`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ignored, title: m.name }),
+    }).then((res) => res.json());
+    if (!r.ok) throw new Error(r.error);
+  } catch (err) {
+    toast(`Couldn’t update: ${err.message}`);
+    return;
+  }
+  m.ignored = ignored;
+  if (ignored && !state.showIgnored) {
+    toast('Ignored. Turn on “Show ignored” to see it again.');
+    if (selectedId === m.id) selectedId = null;
+    document.querySelector(`.mrow[data-id="${CSS.escape(m.id)}"]`)?.classList.add('leaving');
+    setTimeout(() => { if (lastData) render(lastData); }, 400);
+  } else {
+    toast(ignored ? 'Ignored' : 'No longer ignored');
+    rerenderRow(m);
+  }
+}
 
 // Show a saved edit in the list; keep checking while Plaud is renaming.
 function rerenderRow(m) {
