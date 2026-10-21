@@ -185,6 +185,7 @@ app.patch('/api/speakers/:id', jsonRoute((req) => speakers.renamePerson(Number(r
 app.get('/api/speakers/similarity', jsonRoute((req) => speakers.similarity(String(req.query.ids || '').split(',').map(Number).filter(Boolean))));
 // Body: { targetId, sourceIds: [...], updatePlaud?: boolean }
 app.post('/api/speakers/merge', jsonRoute((req) => speakers.mergePeople(Number(req.body?.targetId), req.body?.sourceIds || [], req.body || {})));
+app.delete('/api/speakers/:id', jsonRoute((req) => speakers.deletePerson(Number(req.params.id))));
 app.delete('/api/voiceprints/:id', jsonRoute((req) => speakers.deleteVoicePrint(Number(req.params.id))));
 
 app.get('/api/speakers', (req, res) => res.json({ ok: true, data: speakers.listSpeakers() }));

@@ -509,6 +509,16 @@ export function deleteVoicePrint(id) {
   return { remaining: db.prepare('SELECT COUNT(*) AS n FROM voice_prints WHERE speaker_id = ?').get(vp.speaker_id).n };
 }
 
+// Deletes a person, all their voice prints and their names on meetings here.
+// Names already written to Plaud stay there.
+export function deletePerson(speakerId) {
+  const p = db.prepare('SELECT name FROM speakers WHERE id = ?').get(speakerId);
+  if (!p) throw new Error('That person no longer exists');
+  const prints = db.prepare('SELECT COUNT(*) AS n FROM voice_prints WHERE speaker_id = ?').get(speakerId).n;
+  db.prepare('DELETE FROM speakers WHERE id = ?').run(speakerId); // prints and meeting names cascade
+  return { name: p.name, prints };
+}
+
 // Fill in meeting titles for prints saved before titles were stored.
 (async () => {
   const missing = db.prepare('SELECT DISTINCT file_id FROM voice_prints WHERE meeting_name IS NULL AND file_id IS NOT NULL').all();

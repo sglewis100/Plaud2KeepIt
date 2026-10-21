@@ -1,5 +1,6 @@
 // Settings → Voice Prints: browse people and their voice prints, rename a
-// person (optionally in Plaud too), or delete a single voice print.
+// person (optionally in Plaud too), delete a single voice print, or delete a
+// person with all their voice prints.
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -117,6 +118,7 @@ function personHtml(p, m, q) {
         <div class="vp-person-actions">
           ${status}
           ${isEditing ? '' : `<button class="btn small" type="button" data-action="edit">Rename</button>`}
+          ${isEditing ? '' : `<button class="btn small ghost danger-text" type="button" data-action="delete-person" title="Delete ${esc(p.name)} and all their voice prints">Delete</button>`}
           <button class="btn small ghost vp-toggle" type="button" data-action="toggle" aria-expanded="${open}">
             ${open ? 'Hide' : 'Show'} prints
             <svg viewBox="0 0 24 24" class="icon"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -194,6 +196,8 @@ $('#people').addEventListener('click', async (e) => {
       return render();
     case 'delete':
       return deletePrint(p, Number(btn.dataset.print));
+    case 'delete-person':
+      return deletePerson(p);
   }
 });
 
@@ -235,95 +239,33 @@ async function renamePerson(p, name) {
     const r = await api(`/api/speakers/${p.id}`, { method: 'PATCH', body: { name, updatePlaud } });
     editing = null;
     toast(r.plaudUpdating ? `Renamed. Updating Plaud in ${r.plaudUpdating} meeting${r.plaudUpdating === 1 ? '' : 's'}…` : 'Renamed');
-    await // ---- Selecting & merging people ----
-
-$('#people').addEventListener('change', (e) => {
-  if (!e.target.matches('.vp-select')) return;
-  const id = Number(e.target.dataset.id);
-  e.target.checked ? selected.add(id) : selected.delete(id);
-  e.target.closest('.vp-person').classList.toggle('selected', e.target.checked);
-  updateBar();
-});
-
-function updateBar() {
-  const n = selected.size;
-  $('#vpBar').hidden = !n;
-  $('#vpBarText').textContent = `${n} selected`;
-  $('#vpMerge').disabled = n < 2;
-  $('#vpMerge').title = n < 2 ? 'Select at least two people to merge' : '';
-  document.body.classList.toggle('has-bar', n > 0);
-}
-
-$('#vpClear').addEventListener('click', () => {
-  selected.clear();
-  render();
-  updateBar();
-});
-
-$('#vpMerge').addEventListener('click', mergeSelected);
-
-async function mergeSelected() {
-  const group = people.filter((p) => selected.has(p.id));
-  if (group.length < 2) return;
-  const prints = group.reduce((n, p) => n + p.prints.length, 0);
-  const meetings = group.reduce((n, p) => n + p.meetings.length, 0);
-  const keepDefault = [...group].sort((a, b) => b.prints.length - a.prints.length || b.meetings.length - a.meetings.length)[0];
-  let sim = null;
-  try { sim = await api(`/api/speakers/similarity?ids=${group.map((p) => p.id).join(',')}`); } catch {}
-
-  const th = sim?.thresholds;
-  const simLine = sim?.best == null
-    ? '<p>There aren’t enough voice prints to compare how these people sound.</p>'
-    : sim.best >= th.strong
-      ? `<p class="vp-good">Their voices match (${Math.round(sim.best * 100)}%), so they’re very likely the same person.</p>`
-      : sim.best >= th.possible
-        ? `<p class="vp-warn">Their voices are only a possible match (${Math.round(sim.best * 100)}%). Listen to a meeting of each before merging.</p>`
-        : `<p class="vp-bad">Their voices don’t match (${Math.round(Math.max(0, sim.best) * 100)}%). These sound like different people.</p>`;
-  const different = sim?.best != null && sim.best < th.possible;
-
-  const d = await confirmAction({
-    title: `Merge ${group.length} people?`,
-    body: `
-      <p class="vp-warn-box">You are about to merge <b>${prints} voice print${prints === 1 ? '' : 's'}</b> from <b>${group.length} people</b> (${meetings} meeting${meetings === 1 ? '' : 's'}) into one person. This can’t be undone.</p>
-      ${simLine}
-      <fieldset class="vp-keep">
-        <legend>Keep the name</legend>
-        ${group.map((p) => `
-          <label><input type="radio" name="vpKeep" value="${p.id}" ${p.id === keepDefault.id ? 'checked' : ''}>
-            <b>${esc(p.name)}</b> <span>${p.prints.length} print${p.prints.length === 1 ? '' : 's'} · ${p.meetings.length} meeting${p.meetings.length === 1 ? '' : 's'}</span></label>`).join('')}
-      </fieldset>
-      ${prints > MAX_PRINTS ? `<p>Keeps the ${MAX_PRINTS} most distinct voice prints; ${prints - MAX_PRINTS} near-duplicates will be dropped.</p>` : ''}
-      <label class="vp-check" id="vpPlaudRow"><input type="checkbox" id="vpAlsoPlaud" checked> <span id="vpPlaudText"></span></label>`,
-    ok: different ? 'Merge anyway' : `Merge ${group.length} people`,
-    danger: true,
-    onOpen: (dlg) => {
-      const sync = () => {
-        const keep = group.find((p) => p.id === Number(dlg.querySelector('input[name="vpKeep"]:checked').value));
-        const k = group.filter((p) => p.name !== keep.name).reduce((n, p) => n + p.meetings.length, 0);
-        dlg.querySelector('#vpPlaudRow').hidden = !k;
-        dlg.querySelector('#vpPlaudText').textContent = `Also rename to “${keep.name}” in Plaud (${k} meeting${k === 1 ? '' : 's'})`;
-      };
-      dlg.querySelectorAll('input[name="vpKeep"]').forEach((r) => r.addEventListener('change', sync));
-      sync();
-    },
-  });
-  if (!d) return;
-  const targetId = Number(d.querySelector('input[name="vpKeep"]:checked').value);
-  const updatePlaud = !!d.querySelector('#vpAlsoPlaud')?.checked;
-  try {
-    const r = await api('/api/speakers/merge', { method: 'POST', body: { targetId, sourceIds: group.map((p) => p.id), updatePlaud } });
-    selected.clear();
-    expanded.add(targetId);
-    toast(`Merged into ${r.name}${r.plaudUpdating ? ` · updating Plaud in ${r.plaudUpdating} meeting${r.plaudUpdating === 1 ? '' : 's'}` : ''}`);
     await load();
   } catch (err) {
-    alert(`Couldn’t merge: ${err.message}`);
+    alert(`Couldn’t rename: ${err.message}`);
   }
 }
 
-load();
+async function deletePerson(p) {
+  const n = p.prints.length, m = p.meetings.length;
+  const d = await confirmAction({
+    title: `Delete ${p.name}?`,
+    body: `
+      <p class="vp-warn-box">Deletes <b>${esc(p.name)}</b>${n ? ` and <b>${n === 1 ? 'their voice print' : `all ${n} voice prints`}</b>. They won’t be recognized automatically any more` : ' (no voice prints)'}.</p>
+      ${m ? `<p>Their name is removed from ${m} meeting${m === 1 ? '' : 's'} here, so those speakers show as unnamed in Edit. Names already in Plaud stay there.</p>` : ''}
+      <p>This can’t be undone.</p>`,
+    ok: `Delete ${p.name}`,
+    danger: true,
+  });
+  if (!d) return;
+  try {
+    await api(`/api/speakers/${p.id}`, { method: 'DELETE' });
+    selected.delete(p.id);
+    expanded.delete(p.id);
+    updateBar();
+    toast(`${p.name} deleted`);
+    await load();
   } catch (err) {
-    alert(`Couldn’t rename: ${err.message}`);
+    alert(`Couldn’t delete: ${err.message}`);
   }
 }
 
@@ -350,93 +292,7 @@ async function deletePrint(p, printId) {
   try {
     await api(`/api/voiceprints/${printId}`, { method: 'DELETE' });
     toast('Voice print deleted');
-    await // ---- Selecting & merging people ----
-
-$('#people').addEventListener('change', (e) => {
-  if (!e.target.matches('.vp-select')) return;
-  const id = Number(e.target.dataset.id);
-  e.target.checked ? selected.add(id) : selected.delete(id);
-  e.target.closest('.vp-person').classList.toggle('selected', e.target.checked);
-  updateBar();
-});
-
-function updateBar() {
-  const n = selected.size;
-  $('#vpBar').hidden = !n;
-  $('#vpBarText').textContent = `${n} selected`;
-  $('#vpMerge').disabled = n < 2;
-  $('#vpMerge').title = n < 2 ? 'Select at least two people to merge' : '';
-  document.body.classList.toggle('has-bar', n > 0);
-}
-
-$('#vpClear').addEventListener('click', () => {
-  selected.clear();
-  render();
-  updateBar();
-});
-
-$('#vpMerge').addEventListener('click', mergeSelected);
-
-async function mergeSelected() {
-  const group = people.filter((p) => selected.has(p.id));
-  if (group.length < 2) return;
-  const prints = group.reduce((n, p) => n + p.prints.length, 0);
-  const meetings = group.reduce((n, p) => n + p.meetings.length, 0);
-  const keepDefault = [...group].sort((a, b) => b.prints.length - a.prints.length || b.meetings.length - a.meetings.length)[0];
-  let sim = null;
-  try { sim = await api(`/api/speakers/similarity?ids=${group.map((p) => p.id).join(',')}`); } catch {}
-
-  const th = sim?.thresholds;
-  const simLine = sim?.best == null
-    ? '<p>There aren’t enough voice prints to compare how these people sound.</p>'
-    : sim.best >= th.strong
-      ? `<p class="vp-good">Their voices match (${Math.round(sim.best * 100)}%), so they’re very likely the same person.</p>`
-      : sim.best >= th.possible
-        ? `<p class="vp-warn">Their voices are only a possible match (${Math.round(sim.best * 100)}%). Listen to a meeting of each before merging.</p>`
-        : `<p class="vp-bad">Their voices don’t match (${Math.round(Math.max(0, sim.best) * 100)}%). These sound like different people.</p>`;
-  const different = sim?.best != null && sim.best < th.possible;
-
-  const d = await confirmAction({
-    title: `Merge ${group.length} people?`,
-    body: `
-      <p class="vp-warn-box">You are about to merge <b>${prints} voice print${prints === 1 ? '' : 's'}</b> from <b>${group.length} people</b> (${meetings} meeting${meetings === 1 ? '' : 's'}) into one person. This can’t be undone.</p>
-      ${simLine}
-      <fieldset class="vp-keep">
-        <legend>Keep the name</legend>
-        ${group.map((p) => `
-          <label><input type="radio" name="vpKeep" value="${p.id}" ${p.id === keepDefault.id ? 'checked' : ''}>
-            <b>${esc(p.name)}</b> <span>${p.prints.length} print${p.prints.length === 1 ? '' : 's'} · ${p.meetings.length} meeting${p.meetings.length === 1 ? '' : 's'}</span></label>`).join('')}
-      </fieldset>
-      ${prints > MAX_PRINTS ? `<p>Keeps the ${MAX_PRINTS} most distinct voice prints; ${prints - MAX_PRINTS} near-duplicates will be dropped.</p>` : ''}
-      <label class="vp-check" id="vpPlaudRow"><input type="checkbox" id="vpAlsoPlaud" checked> <span id="vpPlaudText"></span></label>`,
-    ok: different ? 'Merge anyway' : `Merge ${group.length} people`,
-    danger: true,
-    onOpen: (dlg) => {
-      const sync = () => {
-        const keep = group.find((p) => p.id === Number(dlg.querySelector('input[name="vpKeep"]:checked').value));
-        const k = group.filter((p) => p.name !== keep.name).reduce((n, p) => n + p.meetings.length, 0);
-        dlg.querySelector('#vpPlaudRow').hidden = !k;
-        dlg.querySelector('#vpPlaudText').textContent = `Also rename to “${keep.name}” in Plaud (${k} meeting${k === 1 ? '' : 's'})`;
-      };
-      dlg.querySelectorAll('input[name="vpKeep"]').forEach((r) => r.addEventListener('change', sync));
-      sync();
-    },
-  });
-  if (!d) return;
-  const targetId = Number(d.querySelector('input[name="vpKeep"]:checked').value);
-  const updatePlaud = !!d.querySelector('#vpAlsoPlaud')?.checked;
-  try {
-    const r = await api('/api/speakers/merge', { method: 'POST', body: { targetId, sourceIds: group.map((p) => p.id), updatePlaud } });
-    selected.clear();
-    expanded.add(targetId);
-    toast(`Merged into ${r.name}${r.plaudUpdating ? ` · updating Plaud in ${r.plaudUpdating} meeting${r.plaudUpdating === 1 ? '' : 's'}` : ''}`);
     await load();
-  } catch (err) {
-    alert(`Couldn’t merge: ${err.message}`);
-  }
-}
-
-load();
   } catch (err) {
     alert(`Couldn’t delete: ${err.message}`);
   }
