@@ -375,6 +375,15 @@ $('#results').addEventListener('click', async (e) => {
         m.keepIt = st ? { status: st.status, sync: st.sync, missing: st.missing, step: st.step, error: st.error, at: st.finishedAt } : (m.keepItDone || null);
         if (st?.status === 'done') m.keepItDone = m.keepIt;
         rerenderRow(m);
+        // With "Hide synced" on, a meeting that's now fully in Keep It leaves
+        // the list: show "In Keep It" briefly, fade it out, then re-filter.
+        if (st?.status === 'done' && state.hideSynced && fullyInKeepIt(m)) {
+          setTimeout(() => {
+            const row = document.querySelector(`.mrow[data-id="${CSS.escape(m.id)}"]`);
+            row?.classList.add('leaving');
+            setTimeout(() => { if (state.hideSynced && lastData) render(lastData); }, 400);
+          }, 1500);
+        }
       },
     }).finally(() => {
       const b = document.querySelector(`.mrow[data-id="${CSS.escape(m.id)}"] [data-action="keepit"]`);

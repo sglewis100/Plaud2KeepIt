@@ -639,3 +639,4 @@ body.has-bar .page { padding-bottom: 110px; }
 .sp-match-status.pending::before { content: "● "; }
 .sp-player { padding-top: 10px; }
 @media (max-width: 720px) { .sp-section-head { padding-left: 16px; padding-right: 16px; } }
+.mrow.leaving { transition: opacity .35s ease, transform .35s ease; opacity: 0; transform: translateX(12px); }
