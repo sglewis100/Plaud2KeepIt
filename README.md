@@ -125,8 +125,9 @@ The home page lists your Plaud recordings: start and end time, length, when it w
 - **Most recent**: the last 10, 25, 50, 100, 250, or any number up to 500.
 - **Search**: by meeting name. Plaud searches your newest 500 recordings.
 - **Hide synced**: hides meetings that are fully in Keep It (partially synced ones stay visible).
+- **Show ignored**: shows meetings you've ignored, dimmed with an **Ignored** badge. Off by default.
 
-Click a meeting to select it, then use **Edit** or **Send to Keep It**. The recording ID appears at the bottom right of a selected meeting; click it to copy.
+Click a meeting to select it, then use **Edit**, **Send to Keep It**, or **Ignore**. **Ignore** hides a meeting you don't want to import (a test recording, a personal call); turn on **Show ignored** to find it again and click **Un-ignore**. Ignoring only affects this app's list: nothing changes in Plaud or Keep It. The recording ID appears at the bottom right of a selected meeting; click it to copy.
 
 Badges on each meeting: green **In Keep It**, red **Partially in Keep It** (hover to see what's missing), or the step it's on while sending.
 
@@ -134,7 +135,7 @@ Badges on each meeting: green **In Keep It**, red **Partially in Keep It** (hove
 
 One dialog for everything about a meeting:
 
-- **Title**: changing it also renames the recording in Plaud, and the meeting's items in Keep It.
+- **Title**: changing it also renames the recording in Plaud, and the meeting's items in Keep It. Titles become file names in Keep It, so if a title contains characters macOS can't use in a file name, the dialog suggests a safe version when it opens (`:` and `/` become `-` or ` - `, `\` likewise, and a leading `.` is dropped). It's saved only when you click ✓, and **Undo** puts the original back.
 - **Tags**: type and press Enter or comma. Suggestions come from your existing tags: the top match is highlighted, so Enter picks it; press **Esc** to keep exactly what you typed instead.
 - **Folder**: search your folder tree, pick one, or type a new name (or a path like `Clients / Acme`) and choose **Create**.
 - **Player and transcript**: play the meeting with the transcript following along; click any line to jump there.
@@ -144,7 +145,7 @@ One dialog for everything about a meeting:
   - Two labels that sound alike are flagged: Plaud sometimes splits one person into two.
   - Saving a name that already exists asks whether it's the **same person (Merge)** or **someone else with the same name (Save as new)**. Different people keep separate voice prints.
 
-The green **✓** saves everything (details and names), then updates Plaud: the title, and the speaker names in the transcript and AI summary. If the meeting is already in Keep It and you renamed speakers, the ✓ shows **"also updates Keep It"**, and the meeting's items are rebuilt with the new names. Closing with unsaved changes asks first.
+The green **✓** saves everything (details and names), then updates Plaud: the title, and the speaker names in the transcript and AI summary. If the meeting is already in Keep It and you renamed speakers, the ✓ shows **"also updates Keep It"**, and the meeting's items are rebuilt with the new names. The dialog then closes; Plaud keeps updating in the background, even if some speakers are still unnamed. Closing with unsaved changes asks first.
 
 ### Send to Keep It
 
@@ -225,7 +226,7 @@ Everything stays on your Mac, apart from what goes to Plaud and Keep It themselv
 
 | Location | Contents |
 |---|---|
-| `data/plaud2keepit.db` | People, voice prints, speaker assignments, titles, tags, folders, Keep It sync state |
+| `data/plaud2keepit.db` | People, voice prints, speaker assignments, titles, tags, folders, ignored meetings, Keep It sync state |
 | `data/audio/` | Cached meeting audio (for playback and voice prints). Safe to delete; it's re-downloaded when needed. |
 | `.chrome-profile/` | Your logged-in Plaud web session. **Treat it like a password.** |
 | `~/.plaud/tokens-mcp.json` | Plaud MCP's sign-in (created by Plaud's MCP package, shared with other Plaud MCP clients on this Mac) |
