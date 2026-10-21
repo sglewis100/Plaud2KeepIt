@@ -73,7 +73,28 @@ export function mountDetails(root, meeting, { onChange, showTitle = true } = {})
     render();
     state.loaded = true;
     state.initial = JSON.stringify(current());
+    suggestSafeTitle();
     changed();
+  }
+
+  // Titles become file names in Keep It, where ":" and "/" can't be used.
+  // Put a safe version in the box (saved only with ✓), with an Undo.
+  function suggestSafeTitle() {
+    const box = $('.me-title');
+    const original = box.value;
+    const safe = safeTitle(original);
+    if (safe === original) return;
+    box.value = safe;
+    box.dispatchEvent(new Event('input'));
+    const note = $('.me-title-fix');
+    note.innerHTML = `<span>Titles become file names in Keep It, which can’t contain ${esc(illegalIn(original))}. Adjusted for you; saved when you click ✓.</span>
+      <button type="button" class="btn small ghost" data-undo-title>Undo</button>`;
+    note.hidden = false;
+    note.querySelector('[data-undo-title]').onclick = () => {
+      box.value = original;
+      box.dispatchEvent(new Event('input'));
+      note.hidden = true;
+    };
   }
 
   function render() {
@@ -83,6 +104,7 @@ export function mountDetails(root, meeting, { onChange, showTitle = true } = {})
           <span>Title <small class="me-count"></small></span>
           <textarea class="me-title" rows="2" maxlength="${MAX_TITLE}" spellcheck="true"></textarea>
           <small class="me-hint">Changing the title also renames it in Plaud.</small>
+          <div class="me-title-fix" hidden></div>
           <div class="me-title-status"></div>
         </label>
         <div class="me-row">
@@ -210,4 +232,25 @@ export function mountDetails(root, meeting, { onChange, showTitle = true } = {})
       throw err;
     }
   }
+}
+
+// ---- File-name-safe titles ----
+
+// ": " → " - ", other ":" → "-", "/" and "\\" → "-" (" / " → " - "),
+// no leading ".", tidy spaces. "Meeting: A/B" → "Meeting - A-B".
+export function safeTitle(title) {
+  return String(title ?? '')
+    .replace(/\s*:\s+/g, ' - ')
+    .replace(/:/g, '-')
+    .replace(/\s+[/\\]\s+/g, ' - ')
+    .replace(/[/\\]/g, '-')
+    .replace(/^\.+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function illegalIn(title) {
+  const found = [':', '/', '\\'].filter((c) => title.includes(c)).map((c) => `“${c}”`);
+  if (/^\./.test(title)) found.push('a leading “.”');
+  return found.length > 1 ? `${found.slice(0, -1).join(', ')} or ${found.at(-1)}` : found[0];
 }

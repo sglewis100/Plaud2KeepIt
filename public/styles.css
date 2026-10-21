@@ -640,3 +640,5 @@ body.has-bar .page { padding-bottom: 110px; }
 .sp-player { padding-top: 10px; }
 @media (max-width: 720px) { .sp-section-head { padding-left: 16px; padding-right: 16px; } }
 .mrow.leaving { transition: opacity .35s ease, transform .35s ease; opacity: 0; transform: translateX(12px); }
+.me-title-fix { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--warn); }
+.me-title-fix[hidden] { display: none; }
