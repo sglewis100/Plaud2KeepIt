@@ -1,7 +1,11 @@
+import { execFile } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { OggOpusDecoder } from 'ogg-opus-decoder';
+import { promisify } from 'node:util';
 
 // Speaker voice prints: fixed-length embeddings from a speaker-verification
 // model (3D-Speaker ERes2Net, trained on VoxCeleb English). Two clips of the
@@ -30,17 +34,52 @@ function getExtractor() {
 
 // ---- Audio ----
 
-// Decodes Ogg/Opus bytes to mono Float32 PCM at 16 kHz.
-export async function decodeOggTo16k(bytes) {
+// Decodes a recording to mono Float32 PCM at 16 kHz. Plaud's own recordings
+// are Ogg/Opus; files uploaded to Plaud can be MP3, M4A and so on, which macOS's
+// afconvert decodes.
+export async function decodeTo16k(bytes) {
+  return bytes.subarray(0, 4).toString('latin1') === 'OggS' ? decodeOgg(bytes) : decodeWithAfconvert(bytes);
+}
+
+async function decodeOgg(bytes) {
   const decoder = new OggOpusDecoder();
   await decoder.ready;
   try {
-    const { channelData, sampleRate } = await decoder.decodeFile(new Uint8Array(bytes));
+    const { channelData, sampleRate, errors } = await decoder.decodeFile(new Uint8Array(bytes));
+    if (!channelData?.length || !channelData[0].length) throw new Error(`Couldn’t decode the audio${errors?.[0] ? `: ${errors[0].message}` : ''}`);
     const mono = channelData.length === 1 ? channelData[0] : mixDown(channelData);
     return resample(mono, sampleRate, SAMPLE_RATE);
   } finally {
     decoder.free();
   }
+}
+
+async function decodeWithAfconvert(bytes) {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'plaud2keepit-audio-'));
+  try {
+    const src = path.join(dir, 'in'), out = path.join(dir, 'out.wav');
+    await writeFile(src, bytes);
+    await promisify(execFile)('afconvert', ['-f', 'WAVE', '-d', `LEI16@${SAMPLE_RATE}`, '-c', '1', src, out], { timeout: 10 * 60 * 1000 })
+      .catch((err) => { throw new Error(`Couldn’t decode the audio (afconvert: ${(err.stderr || err.message).trim()})`); });
+    return wavSamples(await readFile(out));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+// 16-bit mono samples from any WAV (walks the chunks; afconvert adds extra ones).
+function wavSamples(buf) {
+  for (let at = 12; at + 8 <= buf.length;) {
+    const id = buf.toString('latin1', at, at + 4), size = buf.readUInt32LE(at + 4);
+    if (id === 'data') {
+      const n = Math.floor(Math.min(size, buf.length - at - 8) / 2);
+      const out = new Float32Array(n);
+      for (let i = 0; i < n; i++) out[i] = buf.readInt16LE(at + 8 + i * 2) / 32768;
+      return out;
+    }
+    at += 8 + size + (size % 2);
+  }
+  throw new Error('Couldn’t decode the audio (no data in converted WAV)');
 }
 
 // 16-bit mono WAV at 16 kHz. Browsers seek WAV exactly (Plaud's Ogg files carry

@@ -5,7 +5,7 @@ import { db, tx, DATA_DIR } from './db.js';
 import * as mcp from './plaud-mcp.js';
 import { updateSpeakerNames, MAX_SPEAKER_NAME } from './plaud.js';
 import { bus } from './events.js';
-import { MODEL_NAME, decodeOggTo16k, encodeWav, decodeWav, pickSegments, voicePrint, cosine, toBlob, fromBlob } from './voiceprint.js';
+import { MODEL_NAME, decodeTo16k, encodeWav, decodeWav, pickSegments, voicePrint, cosine, toBlob, fromBlob } from './voiceprint.js';
 
 // Match thresholds (cosine similarity between ERes2Net voice prints), from
 // labeled meetings: the same person across meetings scored 0.76–0.92; different
@@ -86,7 +86,7 @@ async function ensureAudio(meeting) {
 async function ensurePcm(meeting) {
   const wav = audioPath(meeting.id, 'wav');
   if (existsSync(wav)) return { wav, samples: null };
-  const samples = await decodeOggTo16k(await readFile(await ensureAudio(meeting)));
+  const samples = await decodeTo16k(await readFile(await ensureAudio(meeting)));
   const tmp = `${wav}.part`;
   await writeFile(tmp, encodeWav(samples));
   await rename(tmp, wav);
