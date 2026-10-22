@@ -37,6 +37,7 @@ For each meeting you can:
 - [Troubleshooting](#troubleshooting)
 - [Limitations](#limitations)
 - [Uninstalling](#uninstalling)
+- [Updating the screenshots](#updating-the-screenshots)
 - [License](#license)
 
 ---
