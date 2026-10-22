@@ -2,6 +2,10 @@
 
 A small web app that runs on your Mac and gets your **[Plaud](https://www.plaud.ai/) meeting recordings into [Keep It](https://reinventedsoftware.com/keepit/)**, organized and with real names on the speakers.
 
+![The Meetings page: recordings grouped by day, with Keep It status, folder and tags, and Edit, Send to Keep It, Summary and Ignore buttons for the selected meeting](docs/screenshots/meetings.png)
+
+<sub>Screenshots show made-up meetings and people.</sub>
+
 For each meeting you can:
 
 - **Identify speakers by voice.** Plaud labels people "Speaker 1", "Speaker 2"… Plaud2KeepIt builds a voice print for each person you name and recognizes them automatically in later meetings. Names are written back to Plaud, so its transcript and AI summary use them too.
@@ -133,9 +137,13 @@ Click a meeting to select it, then use **Edit**, **Send to Keep It**, **Summary*
 
 Badges on each meeting: green **In Keep It**, red **Partially in Keep It** (hover to see what's missing), or the step it's on while sending.
 
+![The Summary view: Plaud's AI summary formatted, with Copy Markdown and Open in Plaud](docs/screenshots/summary.png)
+
 ### Edit (title, tags, folder and speakers)
 
 One dialog for everything about a meeting:
+
+![The Edit dialog: title, tags and folder, then the player and transcript](docs/screenshots/edit.png)
 
 - **Title**: changing it also renames the recording in Plaud, and the meeting's items in Keep It. Titles become file names in Keep It, so if a title contains characters macOS can't use in a file name, the dialog suggests a safe version when it opens (`:` and `/` become `-` or ` - `, `\` likewise, and a leading `.` is dropped). It's saved only when you click ✓, and **Undo** puts the original back.
 - **Tags**: type and press Enter or comma. Suggestions come from your existing tags: the top match is highlighted, so Enter picks it; press **Esc** to keep exactly what you typed instead.
@@ -146,6 +154,9 @@ One dialog for everything about a meeting:
   - **Possible match** (yellow, 55–70%): listen first; needs its own Confirm.
   - Two labels that sound alike are flagged: Plaud sometimes splits one person into two.
   - Saving a name that already exists asks whether it's the **same person (Merge)** or **someone else with the same name (Save as new)**. Different people keep separate voice prints.
+  - **✕** in a name box clears it. For a saved name (or one Plaud shows), ✓ removes it here, drops the voice print it added, and puts Plaud's own "Speaker N" label back.
+
+![Speaker cards: a 83% voice match prefilled with Confirm, a 61% possible match, and listening samples](docs/screenshots/edit-speakers.png)
 
 The green **✓** saves everything (details and names), then updates Plaud: the title, and the speaker names in the transcript and AI summary. If the meeting is already in Keep It and you renamed speakers, the ✓ shows **"also updates Keep It"**, and the meeting's items are rebuilt with the new names. The dialog then closes; Plaud keeps updating in the background, even if some speakers are still unnamed. Closing with unsaved changes asks first.
 
@@ -181,6 +192,12 @@ Only Plaud2KeepIt's own items are ever touched, never your other Keep It content
 - **Voice prints**: everyone the app recognizes. Search by person or meeting, **rename** someone (optionally in Plaud too), **delete** a single voice print, **delete a person** with all their voice prints (names already written to Plaud stay there), or tick two or more people to **merge** them (with a check of whether their voices actually match). Each person keeps at most 10 voice prints; the most redundant are dropped, so the ones kept cover the widest range of conditions.
 - **Keep It**: how many meetings are fully, partially, or no longer in Keep It, when it last checked, and **Check Keep It now**.
 - **Folders & tags**: the folder tree (new, rename, move, delete) and a tag cloud (rename, merge, delete). Selecting either lists its meetings. **Clean up…** removes tags no meeting uses and folders with no meetings in them, after showing you the list.
+
+![Settings: Plaud website, Plaud MCP, Voice prints and Keep It status cards](docs/screenshots/settings.png)
+
+![Voice Prints: people with their voice prints, rename, delete and merge](docs/screenshots/voiceprints.png)
+
+![Folders & Tags: the folder tree, a tag cloud, and the meetings in the selected folder](docs/screenshots/library.png)
 
 Folders and tags are the app's own organization. Erasing Keep It doesn't remove them, so if you start over, delete them here, or use **Clean up…** once no meeting uses them.
 
