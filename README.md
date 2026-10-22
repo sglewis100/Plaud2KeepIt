@@ -129,7 +129,7 @@ The home page lists your Plaud recordings: start and end time, length, when it w
 - **Hide synced**: hides meetings that are fully in Keep It (partially synced ones stay visible).
 - **Show ignored**: shows meetings you've ignored, dimmed with an **Ignored** badge. Off by default.
 
-Click a meeting to select it, then use **Edit**, **Send to Keep It**, or **Ignore**. **Ignore** hides a meeting you don't want to import (a test recording, a personal call); turn on **Show ignored** to find it again and click **Un-ignore**. Ignoring only affects this app's list: nothing changes in Plaud or Keep It. The recording ID appears at the bottom right of a selected meeting; click it to copy.
+Click a meeting to select it, then use **Edit**, **Send to Keep It**, **Summary**, or **Ignore**. **Summary** shows Plaud's AI summary, formatted, with **Copy Markdown** and **Open in Plaud** (images in the summary are only viewable in Plaud). **Ignore** hides a meeting you don't want to import (a test recording, a personal call); turn on **Show ignored** to find it again and click **Un-ignore**. Ignoring only affects this app's list: nothing changes in Plaud or Keep It. The recording ID appears at the bottom right of a selected meeting; click it to copy.
 
 Badges on each meeting: green **In Keep It**, red **Partially in Keep It** (hover to see what's missing), or the step it's on while sending.
 
