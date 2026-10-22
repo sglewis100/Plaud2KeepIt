@@ -316,6 +316,18 @@ Items already sent to Keep It stay there.
 
 ---
 
+## Updating the screenshots
+
+The screenshots in `docs/screenshots/` come from a mock server with made-up meetings and people (`scripts/screenshots/mock-server.js`), so they never show real recordings. After changing the UI, retake them:
+
+```bash
+npm run screenshots
+```
+
+Add `-- dark` for dark mode. Your own Plaud session, Keep It and data aren't touched.
+
+---
+
 ## License
 
 [MIT](LICENSE) © 2026 Scott Lewis. Use it, change it and share it freely; it comes with no warranty.

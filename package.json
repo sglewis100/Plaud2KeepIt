@@ -25,7 +25,8 @@
     "service:uninstall": "sh service/uninstall.sh",
     "service:restart": "launchctl kickstart -k gui/$(id -u)/com.plaud2keepit.server",
     "service:status": "launchctl print gui/$(id -u)/com.plaud2keepit.server | grep -E \"state|pid|last exit\"",
-    "service:logs": "tail -f logs/server.log"
+    "service:logs": "tail -f logs/server.log",
+    "screenshots": "node scripts/screenshots/take.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
