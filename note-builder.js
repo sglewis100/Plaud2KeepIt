@@ -61,6 +61,20 @@ export function summaryHtml(markdown, { title, metaLines = [], images = new Map(
   </body></html>`;
 }
 
+// The summary as HTML for viewing in the app. Raw HTML in the Markdown is shown
+// as text and only http(s)/mailto links are kept (the content comes from Plaud).
+// Images stay in Plaud: each placeholder becomes a note.
+export function summaryViewHtml(markdown) {
+  const md = markdown.replace(/^\s*\[\]\(plaud:\/\/image\?[^)]*\)\s*$/gm, '\n\n*[Image: open in Plaud to see it]*\n\n');
+  const renderer = new marked.Renderer();
+  renderer.html = (t) => esc(typeof t === 'object' ? t.text : t);
+  return marked.parse(md, { gfm: true, breaks: true, renderer })
+    .replace(/href="(?!https?:|mailto:)[^"]*"/gi, 'href="#"')
+    .replace(/<a href="http/g, '<a target="_blank" rel="noopener" href="http')
+    .replace(/<input[^>]*checked[^>]*>\s*/g, '☑ ')
+    .replace(/<input[^>]*type="checkbox"[^>]*>\s*/g, '☐ ');
+}
+
 // Converts html to <dir>/<baseName>.rtfd and embeds the images at their markers.
 // images: Map index → { file, data (Buffer), width, height } (display size in points)
 export async function buildRtfd(dir, baseName, html, images = new Map()) {

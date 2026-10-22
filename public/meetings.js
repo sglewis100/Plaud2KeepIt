@@ -358,6 +358,10 @@ function rowHtml(m, max, q) {
           ${KEEPIT_ICON}
           Send to Keep It
         </button>
+        <button type="button" class="btn small" data-action="summary" title="Read Plaud’s AI summary">
+          <svg viewBox="0 0 24 24" class="icon"><path d="M6 3.5h9l3 3V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 6 20z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 10h6M9 13.5h6M9 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Summary
+        </button>
         <button type="button" class="btn small ${m.ignored ? 'danger' : 'ghost'}" data-action="ignore" title="${m.ignored ? 'Show this meeting in the list again' : 'Hide this meeting from the list (you won’t import it)'}">
           ${m.ignored
             ? '<svg viewBox="0 0 24 24" class="icon"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg> Un-ignore'
@@ -381,6 +385,9 @@ $('#results').addEventListener('click', async (e) => {
   if (e.target.closest('[data-action="edit"]')) {
     const m = meetingsById.get(row.dataset.id);
     return openSpeakerDialog(m, { onSaved: (meta) => applyMeta(m, meta) });
+  }
+  if (e.target.closest('[data-action="summary"]')) {
+    return showSummary(meetingsById.get(row.dataset.id));
   }
   if (e.target.closest('[data-action="ignore"]')) {
     const m = meetingsById.get(row.dataset.id);
@@ -432,6 +439,43 @@ $('#results').addEventListener('keydown', (e) => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && selectedId && !document.querySelector('dialog[open]')) select(null);
 });
+
+// Plaud's AI summary (via MCP), formatted, in a dialog.
+async function showSummary(m) {
+  const d = document.createElement('dialog');
+  d.className = 'sum-modal';
+  const start = new Date(m.startAt);
+  d.innerHTML = `
+    <div class="sum-head">
+      <div>
+        <h2>${esc(m.name || 'Untitled')}</h2>
+        <span class="sum-sub">${esc(fmtDate(start, { weekday: 'short', year: 'numeric' }))}, ${esc(fmtTime(start))} · ${esc(fmtDuration(m.durationMs, { long: true }))} · AI summary from Plaud</span>
+      </div>
+      <div class="sum-actions">
+        <button type="button" class="btn small" data-copy-md disabled>Copy Markdown</button>
+        <a class="btn small" target="_blank" rel="noopener" href="https://web.plaud.ai/file/${encodeURIComponent(m.id.replace(/^of_/, ''))}">Open in Plaud</a>
+        <button type="button" class="btn small ghost" data-close aria-label="Close">✕</button>
+      </div>
+    </div>
+    <div class="sum-body"><div class="sum-loading"><span class="spinner"></span> Loading summary…</div></div>`;
+  document.body.append(d);
+  d.addEventListener('close', () => d.remove());
+  d.addEventListener('click', (e) => { if (e.target === d || e.target.closest('[data-close]')) d.close(); });
+  d.showModal();
+  d.querySelector('[data-close]').focus();
+  try {
+    const r = await fetch(`/api/meetings/${encodeURIComponent(m.id)}/summary`).then((res) => res.json());
+    if (!r.ok) throw new Error(r.error);
+    d.querySelector('.sum-body').innerHTML = `<article class="sum-md">${r.data.html}</article>`;
+    const copy = d.querySelector('[data-copy-md]');
+    copy.disabled = false;
+    copy.onclick = async () => {
+      try { await navigator.clipboard.writeText(r.data.markdown); toast('Summary copied as Markdown'); } catch {}
+    };
+  } catch (err) {
+    d.querySelector('.sum-body').innerHTML = `<div class="notice error">Couldn’t load the summary: ${esc(err.message)}</div>`;
+  }
+}
 
 // Ignore (hide) or un-ignore a meeting. A newly ignored meeting fades out of
 // the list unless "Show ignored" is on.

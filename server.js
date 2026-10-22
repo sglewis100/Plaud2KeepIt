@@ -7,6 +7,7 @@ import * as mcp from './plaud-mcp.js';
 import * as speakers from './speakers.js';
 import * as library from './library.js';
 import * as keepit from './keepit-sync.js';
+import { summaryViewHtml } from './note-builder.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 40000;
@@ -113,6 +114,14 @@ app.get('/api/library/meetings', libRoute((req) => library.libraryMeetings({ fol
 app.get('/api/meetings/:id/meta', libRoute((req) => library.meetingMeta(req.params.id)));
 // Body: { title, folderId, tags: [names], plaudTitle, startAt, durationMs }
 app.put('/api/meetings/:id/meta', libRoute((req) => library.saveMeetingMeta(req.params.id, req.body || {})));
+// Plaud's AI summary (via MCP), as Markdown and as HTML for viewing.
+app.get('/api/meetings/:id/summary', mcpRoute(async (req) => {
+  const notes = await mcp.getNote(req.params.id);
+  const markdown = notes.find((n) => n.data_type === 'auto_sum_note')?.data_content || '';
+  if (!markdown.trim()) throw new Error('Plaud has no summary for this meeting yet');
+  return { markdown, html: summaryViewHtml(markdown), plaudUrl: `https://web.plaud.ai/file/${req.params.id.replace(/^of_/, '')}` };
+}));
+
 // Body: { ignored: true|false, title? }  (hide a meeting you won't import)
 app.put('/api/meetings/:id/ignore', libRoute((req) => library.setIgnored(req.params.id, req.body || {})));
 app.post('/api/meetings/:id/meta/retry', libRoute((req) => library.retryTitle(req.params.id)));
